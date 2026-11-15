@@ -56,6 +56,10 @@ void wq_set_prism_plain_background(BOOL plain);
 
 // Read-only scan orchestration runs separately from mutations. Directory-sized
 // measurement steps rejoin wq_io(), so foreground requests can run between them.
+// Registered at launch: scans pause when WQ Files goes to the background,
+// unless keepRunning() says a full scan still has background time.
+void wq_scan_lifecycle_install(BOOL (*_Nullable keepRunning)(void));
+void wq_scan_pause_for_background(void);
 dispatch_queue_t wq_scan_queue(void);
 void wq_scan_read(void (^work)(void));
 

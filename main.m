@@ -15,6 +15,7 @@
 #import "WQAccess.h"
 #import "WQLaunchServices.h"
 #import "WQUI.h"
+#import "WQScanJournal.h"
 #import "WQSharing.h"
 #import "WQDir.h"
 #import "WQApps.h"
@@ -6281,6 +6282,7 @@ static BOOL wq_confirm_full_scan(NSString *what, int64_t ids, double seconds)
             // A little extra time when the user switches away (iOS grants about 30 s).
             if (gScanBackgroundTask == UIBackgroundTaskInvalid) {
                 gScanBackgroundTask = [UIApplication.sharedApplication beginBackgroundTaskWithName:@"WQ full scan" expirationHandler:^{
+                    wq_scan_pause_for_background();   // the extra time is over
                     [UIApplication.sharedApplication endBackgroundTask:gScanBackgroundTask];
                     gScanBackgroundTask = UIBackgroundTaskInvalid;
                 }];
@@ -6312,10 +6314,17 @@ static void wq_full_scan_progress(int64_t done, int64_t total, BOOL finished)
         gScanWindow = nil;
         if (window.presentingViewController && !window.isBeingDismissed) [window dismissViewControllerAnimated:YES completion:nil];
         if (gScanBackgroundTask != UIBackgroundTaskInvalid) {
+            // Finished in the background: the other scans pause now.
+            if (UIApplication.sharedApplication.applicationState == UIApplicationStateBackground) wq_scan_pause_for_background();
             [UIApplication.sharedApplication endBackgroundTask:gScanBackgroundTask];
             gScanBackgroundTask = UIBackgroundTaskInvalid;
         }
     });
+}
+
+static BOOL wq_full_scan_has_background_time(void)
+{
+    return gScanBackgroundTask != UIBackgroundTaskInvalid;
 }
 
 @interface WQAppDelegate : UIResponder <UIApplicationDelegate>
@@ -6343,6 +6352,9 @@ int main(int argc, char *argv[])
         wq_set_group_label_resolver(wq_group_id_for_container);
         wq_set_container_list_provider(wq_ls_container_paths);
         wq_set_full_scan_ui(wq_confirm_full_scan, wq_full_scan_progress);
+        wq_scan_lifecycle_install(wq_full_scan_has_background_time);
+        // Scan journals nobody resumed within a week.
+        WQScanJournalPrune(7 * 86400);
         // Temporary media copies and share exports left by earlier runs.
         wq_media_sweep_stale();
         wq_share_sweep_stale_exports();

@@ -672,6 +672,13 @@ static BOOL wq_dir_size_cancellable(NSString *dir, NSString *taskID, WQScanCance
 {
     [super viewWillAppear:animated];
     [self scanTaskChanged:nil];
+    // A kept or restored list older than 10 minutes rescans on its own (the
+    // old list stays visible meanwhile); pull to refresh rescans any time.
+    NSDate *finished = _scanTask.finishedAt;
+    if (!_scanning && !_busy && !_scanTask.running && !_scanTask.userPaused && finished && -finished.timeIntervalSinceNow > 600.0) {
+        [self scan];
+        return;
+    }
     if (!_scanning && _apps) [self refreshBackups];
 }
 

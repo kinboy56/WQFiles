@@ -493,6 +493,11 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
 {
     [super viewWillAppear:animated];
     [self scanTaskChanged:nil];
+    // Sizes older than 10 minutes are measured again on their own (the old
+    // result stays visible meanwhile); pull to refresh any time.
+    NSDate *finished = _scanTask.finishedAt;
+    if (!_scanning && !_cleaning && !_scanTask.running && !_scanTask.userPaused && finished && -finished.timeIntervalSinceNow > 600.0)
+        [self scan];
 }
 
 

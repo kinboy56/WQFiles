@@ -2018,6 +2018,12 @@ static int64_t wq_volume_max_inode(fsid_t fsid, int64_t *probeInode)
 }
 @end
 
+// The user stopped a full scan: the next one starts over (and asks first).
+static void wq_scan_checkpoint_remove(NSArray<NSString *> *bases)
+{
+    WQScanJournalRemove([@"inodes:" stringByAppendingString:[bases componentsJoinedByString:@"\n"]]);
+}
+
 static NSDictionary *wq_scan_checkpoint_load(fsid_t fsid, int64_t firstId, int64_t lastId, NSArray<NSString *> *bases)
 {
     NSDictionary *checkpoint = WQScanJournalLoad([@"inodes:" stringByAppendingString:[bases componentsJoinedByString:@"\n"]]);
@@ -2042,6 +2048,13 @@ static NSDictionary *wq_scan_checkpoint_load(fsid_t fsid, int64_t firstId, int64
 // progress gets the ids done, the range size and the hits per base. Returns
 // one dictionary per base, or nil when cancelled.
 typedef void (^WQScanProgress)(int64_t done, int64_t total, const NSUInteger *counts);
+// Inode checkpoints are written at most this often (every chunk in the
+// recovery tests, which kill the process right after one).
+#ifdef WQ_ACCESS_TESTING
+static const NSTimeInterval kWQCheckpointInterval = 0;
+#else
+static const NSTimeInterval kWQCheckpointInterval = 20.0;
+#endif
 static NSArray<NSMutableDictionary<NSString *, NSNumber *> *> *wq_scan_children(fsid_t fsid, int64_t firstId, int64_t lastId,
                                                                                NSArray<NSString *> *bases,
                                                                                WQScanCancellation *cancellation,
@@ -2096,16 +2109,33 @@ static NSArray<NSMutableDictionary<NSString *, NSNumber *> *> *wq_scan_children(
             [completed addIndexesInRange:NSMakeRange((NSUInteger)start, (NSUInteger)(end - start + 1))];
     }
     done = (int64_t)completed.count;
-    __block NSTimeInterval savedAt = 0;
-    void (^saveCheckpoint)(void) = ^{
+    // Checkpoints: a snapshot is taken under `lock` (cheap copies), written
+    // outside it every 20 s, and never older over newer. Writing the whole
+    // found set every second stalled every worker and wrote hundreds of MB
+    // over a long scan (iOS kills apps for heavy disk writes).
+    __block NSTimeInterval savedAt = NSDate.date.timeIntervalSinceReferenceDate;
+    __block uint64_t snapshotSeq = 0, writtenSeq = 0;
+    NSLock *writeLock = [NSLock new];
+    NSDictionary *(^snapshotCheckpoint)(void) = ^NSDictionary *{   // caller holds lock
         NSMutableArray *ranges = [NSMutableArray new];
         [completed enumerateRangesUsingBlock:^(NSRange range, BOOL *__unused stop) {
             [ranges addObject:@[@(range.location), @(NSMaxRange(range) - 1)]];
         }];
-        NSDictionary *state = @{@"fsid": @[@(fsid.val[0]), @(fsid.val[1])], @"first": @(requestedFirst),
+        NSMutableArray *foundCopy = [NSMutableArray arrayWithCapacity:found.count];
+        for (NSDictionary *hits in found) [foundCopy addObject:[hits copy]];
+        snapshotSeq++;
+        return @{@"seq": @(snapshotSeq), @"state": @{@"fsid": @[@(fsid.val[0]), @(fsid.val[1])], @"first": @(requestedFirst),
             @"last": @(lastId), @"next": @(MIN(firstId + frontier * chunk, lastId + 1)),
-            @"found": found, @"ranges": ranges, @"at": NSDate.date};
-        if (!WQScanJournalSave(journalKey, state)) wq_log(@"scan: checkpoint write failed; continuing in memory");
+            @"found": foundCopy, @"ranges": ranges, @"at": NSDate.date}};
+    };
+    void (^writeCheckpoint)(NSDictionary *) = ^(NSDictionary *snapshot) {
+        uint64_t seq = [snapshot[@"seq"] unsignedLongLongValue];
+        [writeLock lock];
+        if (seq > writtenSeq) {
+            if (!WQScanJournalSave(journalKey, snapshot[@"state"])) wq_log(@"scan: checkpoint write failed; continuing in memory");
+            writtenSeq = seq;
+        }
+        [writeLock unlock];
     };
     NSUInteger cores = NSProcessInfo.processInfo.activeProcessorCount;
     // A full scan the user agreed to wait for uses all but two cores; the
@@ -2158,9 +2188,11 @@ static NSArray<NSMutableDictionary<NSString *, NSNumber *> *> *wq_scan_children(
                 frontier++;
             }
             NSTimeInterval now = NSDate.date.timeIntervalSinceReferenceDate;
-            if (now - savedAt >= 1.0) { saveCheckpoint(); savedAt = now; }
+            NSDictionary *checkpointState = nil;
+            if (now - savedAt >= kWQCheckpointInterval) { checkpointState = snapshotCheckpoint(); savedAt = now; }
             int64_t nowDone = done + firstId - requestedFirst;
             [lock unlock];
+            if (checkpointState) writeCheckpoint(checkpointState);
             if (progress && !cancellation.isCancelled) progress(nowDone, lastId - requestedFirst + 1, snapshot);
         }
     });
@@ -2168,9 +2200,17 @@ static NSArray<NSMutableDictionary<NSString *, NSNumber *> *> *wq_scan_children(
     free(prefixes);
     free(prefixLens);
     free(counts);
-    // Save both the contiguous frontier and completed ranges beyond a hole.
-    saveCheckpoint();
-    if (cancellation.isCancelled || atomic_load(&abandoned)) return nil;
+    // Interrupted: save both the contiguous frontier and completed ranges
+    // beyond a hole. Finished: the checkpoint has done its job; a kept one
+    // would turn the next forced full scan into a silent resume.
+    if (cancellation.isCancelled || atomic_load(&abandoned)) {
+        [lock lock];
+        NSDictionary *snapshot = snapshotCheckpoint();
+        [lock unlock];
+        writeCheckpoint(snapshot);
+        return nil;
+    }
+    WQScanJournalRemove(journalKey);
     return found;
 }
 
@@ -2569,7 +2609,10 @@ static WQScanCancellation *wq_full_scan_begin(NSString *what, int64_t ids, doubl
         return nil;
     }
     if (!wq_full_scan_acquire(what, caller)) return nil;
-    if (!resuming && (!gFullScanConfirm || !gFullScanConfirm(what, ids, seconds))) {
+    // A resumed scan asks too: the confirmation also opens the scan window,
+    // the only place to Stop it.
+    if (resuming) wq_log(@"scan: a saved full scan of %@ can be resumed", what);
+    if (!gFullScanConfirm || !gFullScanConfirm(what, ids, seconds)) {
         atomic_store(&gFullScanDeclined, YES);
         wq_log(@"scan: full scan of %@ not started (%lld ids, about %.0f s)", what, (long long)ids, seconds);
         wq_full_scan_release();
@@ -2836,7 +2879,7 @@ inodeScan:;
         stop = wq_full_scan_begin(inodeOnly ? WQLocalized(@"Internal Daemons") : WQLocalized(@"the app folders"), maxInode,
                                   wq_full_scan_estimate(maxInode, sampleRate), nil,
                                   wq_scan_checkpoint_load(fsid, firstId, maxInode, roots) != nil);
-        if (!stop) return nil;
+        if (!stop) return nil;   // declined: progress kept, the next attempt asks again
         qos = QOS_CLASS_USER_INITIATED;
     }
     CFAbsoluteTime started = CFAbsoluteTimeGetCurrent();
@@ -2848,6 +2891,7 @@ inodeScan:;
         if (stop && gFullScanProgress) gFullScanProgress(done, total, NO);
     };
     NSArray *lists = wq_scan_children(fsid, firstId, maxInode, roots, stop, qos, stop != nil, report, demand);
+    if (stop && stop.isCancelled) wq_scan_checkpoint_remove(roots);   // Stop: start over next time, and only when asked
     if (stop) wq_full_scan_end(stop);
     if (!lists) return nil;
     NSMutableDictionary *saved = [NSMutableDictionary new];
@@ -3073,7 +3117,7 @@ NSArray<NSString *> *wq_enumerate(NSString *dir, int64_t maxInode, WQScanCancell
     if (dynamicBound) {
         stop = wq_full_scan_begin(base.lastPathComponent, maxInode, wq_full_scan_estimate(maxInode, 0), cancellation,
                                   wq_scan_checkpoint_load(fsid, 1, maxInode, @[base]) != nil);
-        if (!stop) return nil;
+        if (!stop) return nil;   // declined: progress kept, the next attempt asks again
     }
     // Either the caller's cancellation or the scan window's Stop ends it.
     WQScanCancellation *either = stop ?: cancellation;
@@ -3091,6 +3135,7 @@ NSArray<NSString *> *wq_enumerate(NSString *dir, int64_t maxInode, WQScanCancell
             if (progress) progress(done, total, counts[0]);
             if (stop && gFullScanProgress) gFullScanProgress(done, total, NO);
         }, nil);
+    if (stop && stop.isCancelled) wq_scan_checkpoint_remove(@[base]);
     if (stop) { wq_full_scan_end(stop); [either cancel]; }
     if (!lists) return nil;
     if (dynamicBound) wq_check_scan_completion(fsid, probeInode, dir);
@@ -3158,6 +3203,14 @@ static NSArray *wq_measure_identity(const struct stat *st)
     return @[@(st->st_dev), @(st->st_ino), @(st->st_birthtimespec.tv_sec), @(st->st_birthtimespec.tv_nsec)];
 }
 
+// Measurement progress is saved at most this often (the recovery tests save
+// after every directory to cover a kill right after the first one).
+#ifdef WQ_ACCESS_TESTING
+static const NSTimeInterval kWQMeasureSaveInterval = 0;
+#else
+static const NSTimeInterval kWQMeasureSaveInterval = 20.0;
+#endif
+
 WQMeasureResult wq_measure_tree_resumable(NSString *dir, NSString *scope, NSString *taskID,
     WQScanCancellation *cancellation, unsigned long long *bytes, void (^performIO)(void (^work)(void)))
 {
@@ -3182,7 +3235,9 @@ WQMeasureResult wq_measure_tree_resumable(NSString *dir, NSString *scope, NSStri
     __block unsigned long long total = valid ? [saved[@"bytes"] unsignedLongLongValue] : 0;
     __block BOOL limited = valid && [saved[@"limited"] boolValue];
     if (valid) wq_log(@"measure: resuming %@ (%lu directories remaining)", dir.lastPathComponent, (unsigned long)pending.count);
-    NSTimeInterval lastSave = 0;
+    // Small directories finish before the first save; a finished measurement
+    // removes its journal.
+    NSTimeInterval lastSave = NSDate.date.timeIntervalSinceReferenceDate;
     while (pending.count) {
         if (!wq_scan_wait(cancellation)) return WQMeasureResultCancelled;
         NSString *path = pending.lastObject;
@@ -3218,13 +3273,14 @@ WQMeasureResult wq_measure_tree_resumable(NSString *dir, NSString *scope, NSStri
         total += directoryBytes;
         limited |= directoryLimited;
         NSTimeInterval now = NSDate.date.timeIntervalSinceReferenceDate;
-        if (!pending.count || now - lastSave >= 1.0) {
+        if (pending.count && now - lastSave >= kWQMeasureSaveInterval) {
             if (!WQScanJournalSave(key, @{@"task": taskID, @"identity": identity, @"pending": pending,
                                          @"bytes": @(total), @"limited": @(limited)}))
                 wq_log(@"measure: cannot save progress for %@", dir.lastPathComponent);
             lastSave = now;
         }
     }
+    WQScanJournalRemove(key);
     if (bytes) *bytes = total;
     return limited ? WQMeasureResultLimited : WQMeasureResultKnown;
 }

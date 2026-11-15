@@ -317,16 +317,34 @@ dispatch_queue_t wq_scan_queue(void)
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         queue = dispatch_queue_create("wqfiles.scans", dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_UTILITY, 0));
+    });
+    return queue;
+}
+
+static BOOL (*gScanKeepsRunning)(void);
+
+void wq_scan_pause_for_background(void)
+{
+    wq_scan_set_paused(YES);
+    [WQScanTask setPaused:YES];
+}
+
+void wq_scan_lifecycle_install(BOOL (*keepRunning)(void))
+{
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        gScanKeepsRunning = keepRunning;
+        // Scans pause in the background, except while a full scan still has
+        // its background time; that time's expiry pauses them instead.
         [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *__unused note) {
-            wq_scan_set_paused(YES);
-            [WQScanTask setPaused:YES];
+            if (gScanKeepsRunning && gScanKeepsRunning()) return;
+            wq_scan_pause_for_background();
         }];
         [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationWillEnterForegroundNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *__unused note) {
             wq_scan_set_paused(NO);
             [WQScanTask setPaused:NO];
         }];
     });
-    return queue;
 }
 
 void wq_scan_read(void (^work)(void))

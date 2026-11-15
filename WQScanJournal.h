@@ -37,11 +37,16 @@ static inline BOOL WQScanJournalFailed(NSString *key)
 }
 static inline BOOL WQScanJournalSave(NSString *key, NSDictionary *value)
 {
+    // Directory setup once per process, not on every save.
+    static BOOL ready;
     NSString *directory = WQScanJournalDirectory();
-    if (![NSFileManager.defaultManager createDirectoryAtPath:directory withIntermediateDirectories:YES
-                                                 attributes:@{NSFilePosixPermissions: @0700} error:nil]) return WQScanJournalFailed(key);
-    NSURL *url = [NSURL fileURLWithPath:directory];
-    [url setResourceValue:@YES forKey:NSURLIsExcludedFromBackupKey error:nil];
+    if (!ready) {
+        if (![NSFileManager.defaultManager createDirectoryAtPath:directory withIntermediateDirectories:YES
+                                                     attributes:@{NSFilePosixPermissions: @0700} error:nil]) return WQScanJournalFailed(key);
+        NSURL *url = [NSURL fileURLWithPath:directory];
+        [url setResourceValue:@YES forKey:NSURLIsExcludedFromBackupKey error:nil];
+        ready = YES;
+    }
     NSDictionary *envelope = @{@"version": @1, @"key": key, @"value": value};
     NSData *data = [NSPropertyListSerialization dataWithPropertyList:envelope format:NSPropertyListBinaryFormat_v1_0 options:0 error:nil];
     if (data && [data writeToFile:WQScanJournalPath(key) options:NSDataWritingAtomic error:nil]) return YES;
@@ -50,6 +55,18 @@ static inline BOOL WQScanJournalSave(NSString *key, NSDictionary *value)
 static inline void WQScanJournalRemove(NSString *key)
 {
     [NSFileManager.defaultManager removeItemAtPath:WQScanJournalPath(key) error:nil];
+}
+// Journals nobody resumed (an app uninstalled mid-measure, a scan never
+// reopened): removed at launch once older than `age` seconds.
+static inline void WQScanJournalPrune(NSTimeInterval age)
+{
+    NSString *directory = WQScanJournalDirectory();
+    for (NSString *name in [NSFileManager.defaultManager contentsOfDirectoryAtPath:directory error:nil] ?: @[]) {
+        if (![name hasSuffix:@".plist"]) continue;
+        NSString *path = [directory stringByAppendingPathComponent:name];
+        NSDate *modified = [NSFileManager.defaultManager attributesOfItemAtPath:path error:nil].fileModificationDate;
+        if (modified && -modified.timeIntervalSinceNow > age) [NSFileManager.defaultManager removeItemAtPath:path error:nil];
+    }
 }
 static inline NSDictionary *WQScanEncode(id object, NSArray<NSString *> *keys)
 {
