@@ -82,12 +82,6 @@ BOOL wq_copy_to_local(NSString *path, NSString *dest, NSString *_Nullable *_Null
 // explanation for the user; nil if the owner and mode allow it.
 NSString *_Nullable wq_permission_hint(NSString *path, BOOL forWriting);
 
-#if WQ_DEBUG_LABELS
-// Debug builds only (WQ_DEBUG=1 ./build.sh): everything each label source
-// says about the App Group containers, as text. Blocking; minutes at most.
-NSString *wq_debug_group_label_report(void);
-#endif
-
 // Whether the owner, group and mode of `st` let this app (uid, gid and its
 // supplementary groups) read the item; for folders, read and search. The
 // folder lists use it to dim what can't be opened (issue #57).

@@ -75,11 +75,8 @@ trap cleanup EXIT
 APP="$OUT/Payload/WQFiles.app"
 mkdir -p "$APP"
 SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-# WQ_DEBUG=1: adds Settings → Troubleshooting → Group Label Report.
-DEBUG_FLAGS=()
-[[ "${WQ_DEBUG:-0}" == 1 ]] && DEBUG_FLAGS=(-DWQ_DEBUG_LABELS=1)
 xcrun --sdk iphoneos clang -fobjc-arc -fmodules -fmodules-cache-path="$OUT/ModuleCache" -arch arm64 \
-    -miphoneos-version-min="$MINIMUM_IOS_VERSION" ${DEBUG_FLAGS[@]+"${DEBUG_FLAGS[@]}"} \
+    -miphoneos-version-min="$MINIMUM_IOS_VERSION" \
     -isysroot "$SDK" -Wall -Wextra -Werror -O2 \
     -framework UIKit -framework Foundation -framework Security -framework UniformTypeIdentifiers \
     WQCore.m WQAccess.m WQLocalization.m WQLaunchServices.m WQUI.m WQSharing.m WQApps.m WQCache.m WQPlistEditor.m WQHexViewer.m WQSQLiteViewer.m WQSQLiteSave.m WQHealth.m WQTrash.m WQArchive.m WQSyntax.m WQMediaStream.m main.m -lsqlite3 -lz -o "$APP/WQFiles"

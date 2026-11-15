@@ -36,11 +36,7 @@ NSString *wq_device_line(void)
 NSString *wq_app_version_line(void)
 {
     NSDictionary *info = NSBundle.mainBundle.infoDictionary;
-#if WQ_DEBUG_LABELS
-    return [NSString stringWithFormat:@"WQ Files %@ (%@) debug", info[@"CFBundleShortVersionString"] ?: @"?", info[@"CFBundleVersion"] ?: @"?"];
-#else
     return [NSString stringWithFormat:@"WQ Files %@ (%@)", info[@"CFBundleShortVersionString"] ?: @"?", info[@"CFBundleVersion"] ?: @"?"];
-#endif
 }
 
 const CGFloat kWQDeviceStripHeight = 46;

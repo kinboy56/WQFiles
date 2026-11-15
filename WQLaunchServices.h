@@ -35,9 +35,6 @@ NSString *_Nullable wq_bundle_path_for_id(NSString *bundleID);
 // <UUID>) of installed apps, from the same database; empty if unknown.
 // wq_bundle_id_for_container also labels these.
 NSArray<NSString *> *wq_ls_bundle_containers(void);
-// The LaunchServices database WQ Files reads (nil before it was found) and the
-// bundle ids it maps to data containers; for the debug group label report.
-NSString *_Nullable wq_ls_store_path(void);
 
 // App Group folder -> group id (issue #59). The database keeps each app's
 // group containers as an embedded binary plist ({group id: folder path},
@@ -47,6 +44,5 @@ NSString *_Nullable wq_ls_store_path(void);
 NSDictionary<NSString *, NSString *> *wq_ls_group_ids_from_store(NSData *data);
 // The group id the current database gives `path`, or nil.
 NSString *_Nullable wq_group_id_for_container(NSString *path);
-NSArray<NSString *> *wq_ls_known_bundle_ids(void);
 
 NS_ASSUME_NONNULL_END
