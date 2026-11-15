@@ -3,7 +3,7 @@
 **WQ Files** is a file browser, app data manager and cache cleaner for iOS 26
 and 27. "WQ" stands for worse_query, the sandbox technique it is built on. It
 reaches other apps' and system containers with no jailbreak and no kernel
-exploit. Tested on iOS 26.7.1, 27.0.1, 27.2.1 and the 27.3 beta (confirmed by a user).
+exploit. Tested on iOS 26.5 to the 27.3 beta; see [Tested devices](#tested-devices).
 
 **iOS 26 (26.0 to 26.7.2):** supported since 0.7; tested on 26.7.1. worse_query reaches the app, extension, daemon and app group
 containers there, but not System Data or the system groups, so WQ Files hides
@@ -20,6 +20,27 @@ WQ Files is available in English, German, Italian, Spanish, Portuguese
 (Brazil), Russian, Polish, Turkish, Thai, Korean, Arabic and Simplified Chinese. It follows
 the device language; **Language** in WQ Files' Settings picks another, used
 from the next start.
+
+## Tested devices
+
+Confirmed working, by the maintainer or by users in GitHub issues:
+
+| Device | iOS | Source |
+|---|---|---|
+| iPhone 16 Pro Max (iPhone17,2) | 27.2.1 | maintainer |
+| iPad Air 5 | iPadOS 27.0.1 | maintainer ([#3](https://github.com/kolbicz/WQFiles/issues/3)) |
+| iPhone 18 Pro (iPhone19,2) | 27.2 | user ([#7](https://github.com/kolbicz/WQFiles/issues/7)) |
+| iPhone19,7 | 27.3 beta | user ([#50](https://github.com/kolbicz/WQFiles/issues/50)) |
+| iPhone 17 Pro Max (iPhone18,2) | 27.0.1 | user ([#42](https://github.com/kolbicz/WQFiles/issues/42)) |
+| iPhone 16 Pro (iPhone17,1) | 26.5 | user ([#37](https://github.com/kolbicz/WQFiles/issues/37)) |
+| iPhone 13 (iPhone14,5) | 27.2 | user ([#8](https://github.com/kolbicz/WQFiles/issues/8)) |
+| (maintainer) | 26.7.1 | maintainer |
+
+Works on a device or iOS version not listed here? Open an issue with the Log
+(Settings → Log → Share) and it gets added.
+
+**Not supported:** iOS 18 and older. worse_query doesn't exist there; WQ Files shows a notice instead of scanning. On iOS 17 and 18 use
+[Cyanide](https://github.com/kolbicz/Cyanide).
 
 ## What it opens
 
