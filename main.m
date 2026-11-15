@@ -3327,8 +3327,10 @@ static NSString *const kSystemGroupRoot = @"/private/var/containers/Shared/Syste
 - (NSString *)fullLog
 {
     NSDictionary *info = NSBundle.mainBundle.infoDictionary;
-    return WQLocalizedFormat(@"WQ Files %@ (%@)\n%@\n\n%@",
+    NSString *log = WQLocalizedFormat(@"WQ Files %@ (%@)\n%@\n\n%@",
             info[@"CFBundleShortVersionString"] ?: @"?", info[@"CFBundleVersion"] ?: @"?", wq_device_line(), wq_log_text());
+    // Debug builds say so in the first line (same version number as release).
+    return WQ_DEBUG_LABELS ? [@"[debug build] " stringByAppendingString:log] : log;
 }
 
 - (void)viewWillAppear:(BOOL)animated

@@ -36,7 +36,11 @@ NSString *wq_device_line(void)
 NSString *wq_app_version_line(void)
 {
     NSDictionary *info = NSBundle.mainBundle.infoDictionary;
+#if WQ_DEBUG_LABELS
+    return [NSString stringWithFormat:@"WQ Files %@ (%@) debug", info[@"CFBundleShortVersionString"] ?: @"?", info[@"CFBundleVersion"] ?: @"?"];
+#else
     return [NSString stringWithFormat:@"WQ Files %@ (%@)", info[@"CFBundleShortVersionString"] ?: @"?", info[@"CFBundleVersion"] ?: @"?"];
+#endif
 }
 
 const CGFloat kWQDeviceStripHeight = 46;
@@ -278,10 +282,20 @@ UIImage *wq_app_icon(NSString *bundleID)
     // main thread. Lists warm the cache from their background passes; a
     // main-thread miss gets the tile without caching it.
     BOOL background = !NSThread.isMainThread;
-    UIImage *system = wq_real_icon(bundleID);
+    // App Group ids ("group.net.whatsapp.WhatsApp.shared") aren't bundles:
+    // look up the app id inside them (net.whatsapp.WhatsApp.shared, then its
+    // parents) instead of the group id and its "group.net…" parents.
+    NSString *appID = bundleID;
+    for (NSString *prefix in @[@"group.", @"systemgroup."]) {
+        if ([bundleID hasPrefix:prefix] && bundleID.length > prefix.length) {
+            appID = [bundleID substringFromIndex:prefix.length];
+            break;
+        }
+    }
+    UIImage *system = wq_real_icon(appID);
     if (system && background) wq_icon_note(bundleID, @"iOS returned an icon");
-    UIImage *raw = system ?: (background ? wq_bundle_icon(bundleID) : nil);
-    NSArray *parts = [bundleID componentsSeparatedByString:@"."];
+    UIImage *raw = system ?: (background ? wq_bundle_icon(appID) : nil);
+    NSArray *parts = [appID componentsSeparatedByString:@"."];
     for (NSInteger n = (NSInteger)parts.count - 1; !raw && n >= 3; n--)
     {
         NSString *parent = [[parts subarrayWithRange:NSMakeRange(0, (NSUInteger)n)] componentsJoinedByString:@"."];
