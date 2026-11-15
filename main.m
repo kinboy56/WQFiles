@@ -6395,6 +6395,7 @@ int main(int argc, char *argv[])
         // Container folders get their bundle id from the LaunchServices database
         // when the identifier attribute can't be read (iOS 27.2).
         wq_set_container_label_resolver(wq_bundle_id_for_container);
+        wq_set_group_label_resolver(wq_group_id_for_container);
         wq_set_container_list_provider(wq_ls_container_paths);
         wq_set_full_scan_ui(wq_confirm_full_scan, wq_full_scan_progress);
         // Temporary media copies and share exports left by earlier runs.

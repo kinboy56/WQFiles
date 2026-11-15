@@ -3382,6 +3382,12 @@ static NSString *wq_container_identifier_lookup(NSString *key, WQLabelIdentity s
 }
 
 static NSString *(*gContainerLabelResolver)(NSString *path);
+static NSString *(*gGroupLabelResolver)(NSString *path);
+
+void wq_set_group_label_resolver(NSString *(*resolver)(NSString *path))
+{
+    gGroupLabelResolver = resolver;
+}
 
 void wq_set_container_label_resolver(NSString *(*resolver)(NSString *path))
 {
@@ -3431,13 +3437,33 @@ NSString *wq_container_label(NSString *dir)
     if (resolved.length) return resolved;
     // The metadata plist is usually root-only (mode 600); only try it when the
     // owner and mode let this app read it, so the Log isn't flooded.
+    NSString *fromPlist = nil;
     NSString *meta = [dir stringByAppendingPathComponent:@".com.apple.mobile_container_manager.metadata.plist"];
-    if (wq_permission_hint(meta, NO)) return nil;
-    NSData *data = wq_read(meta, 256 * 1024, NULL);
-    if (!data) return nil;
-    NSDictionary *plist = [NSPropertyListSerialization propertyListWithData:data options:0 format:NULL error:nil];
-    id ident = [plist isKindOfClass:NSDictionary.class] ? plist[@"MCMMetadataIdentifier"] : nil;
-    return [ident isKindOfClass:NSString.class] ? ident : nil;
+    if (!wq_permission_hint(meta, NO)) {
+        NSData *data = wq_read(meta, 256 * 1024, NULL);
+        NSDictionary *plist = data ? [NSPropertyListSerialization propertyListWithData:data options:0 format:NULL error:nil] : nil;
+        id ident = [plist isKindOfClass:NSDictionary.class] ? plist[@"MCMMetadataIdentifier"] : nil;
+        if ([ident isKindOfClass:NSString.class] && [ident length]) fromPlist = ident;
+    }
+    // App Groups whose plist is root-only (issue #59): the group id the apps'
+    // records in the LaunchServices database give this folder. The plist
+    // wins when both exist; a disagreement is logged once.
+    NSString *fromGroups = gGroupLabelResolver ? gGroupLabelResolver(WQCanonicalVarPath(dir)) : nil;
+    if (fromPlist) {
+        if (fromGroups.length && ![fromGroups isEqualToString:fromPlist]) {
+            static NSMutableSet<NSString *> *reported;
+            BOOL first = NO;
+            @synchronized (NSNull.null) {
+                if (!reported) reported = [NSMutableSet new];
+                first = ![reported containsObject:dir];
+                [reported addObject:dir];
+            }
+            if (first) wq_log(@"label: app records give %@ for %@, its metadata says %@; using the metadata",
+                              fromGroups, dir.lastPathComponent, fromPlist);
+        }
+        return fromPlist;
+    }
+    return fromGroups.length ? fromGroups : nil;
 }
 
 #if WQ_DEBUG_LABELS
@@ -3637,7 +3663,7 @@ NSString *wq_debug_group_label_report(void)
     NSUInteger tried = 0, answered[3] = {0, 0, 0}, matched = 0, shownLines = 0;
     NSMutableDictionary<NSString *, NSNumber *> *notes = [NSMutableDictionary new];
     for (NSString *ident in probe) {
-        if (tried >= 400) break;
+        if (tried >= 5) break;   // never answered on 27.2.1; kept as a spot check
         tried++;
         NSMutableArray *parts = [NSMutableArray new];
         BOOL any = NO;
@@ -3678,7 +3704,7 @@ NSString *wq_debug_group_label_report(void)
         id (*send1)(id, SEL, id) = (id (*)(id, SEL, id))objc_msgSend;
         id (*send0)(id, SEL) = (id (*)(id, SEL))objc_msgSend;
         for (NSString *bid in bundles) {
-            if (proxyShown >= 25) break;
+            if (proxyShown >= 5) break;   // nil for every app on 27.2.1
             if ([bid hasPrefix:@"com.apple."] && proxyShown >= 5) continue;
             proxyShown++;
             @try {
@@ -3695,11 +3721,51 @@ NSString *wq_debug_group_label_report(void)
     }
     line(@"%lu of %lu apps returned group folders", (unsigned long)withGroups, (unsigned long)proxyShown);
 
-    // 5. Each group folder in detail (first 30).
-    line(@"\n== 5. Group folders in detail");
+    // 5. The app-record mapping (issue #59) checked against the metadata
+    // plists that can be read: every disagreement would be a wrong label.
+    NSDictionary<NSString *, NSString *> *map = data ? wq_ls_group_ids_from_store(data) : @{};
+    NSUInteger agree = 0, disagree = 0, onlyMap = 0, onlyPlist = 0, neither = 0;
+    NSMutableArray<NSString *> *details = [NSMutableArray new];
+    for (NSString *g in groups) {
+        NSString *meta = [g stringByAppendingPathComponent:@".com.apple.mobile_container_manager.metadata.plist"];
+        NSData *metaData = wq_read(meta, 256 * 1024, NULL);
+        NSDictionary *plist = metaData ? [NSPropertyListSerialization propertyListWithData:metaData options:0 format:NULL error:nil] : nil;
+        NSString *fromPlist = [plist isKindOfClass:NSDictionary.class] && [plist[@"MCMMetadataIdentifier"] isKindOfClass:NSString.class]
+            ? plist[@"MCMMetadataIdentifier"] : nil;
+        NSString *fromMap = map[g];
+        if (fromPlist && fromMap) {
+            if ([fromPlist isEqualToString:fromMap]) agree++;
+            else { disagree++; [details addObject:[NSString stringWithFormat:@"DISAGREE %@: plist %@, records %@", g.lastPathComponent, fromPlist, fromMap]]; }
+        } else if (fromMap) { onlyMap++; [details addObject:[NSString stringWithFormat:@"new %@: %@", g.lastPathComponent, fromMap]]; }
+        else if (fromPlist) { onlyPlist++; [details addObject:[NSString stringWithFormat:@"plist only %@: %@", g.lastPathComponent, fromPlist]]; }
+        else { neither++; [details addObject:[NSString stringWithFormat:@"still unknown %@", g.lastPathComponent]]; }
+    }
+    line(@"\n== 5. App-record mapping: %lu folders mapped in the database", (unsigned long)map.count);
+    line(@"of %lu group folders: agree with plist %lu, DISAGREE %lu, new (plist unreadable) %lu, plist only %lu, still unknown %lu",
+         (unsigned long)groups.count, (unsigned long)agree, (unsigned long)disagree, (unsigned long)onlyMap, (unsigned long)onlyPlist, (unsigned long)neither);
+    [details sortUsingSelector:@selector(compare:)];
+    for (NSString *d in details) line(@"   %@", d);
+
+    // 6. The new identity attribute, raw (first 3 folders).
+    line(@"\n== 6. com.apple.containermanager.identity");
+    NSUInteger shownIdentity = 0;
+    for (NSString *g in groups) {
+        if (shownIdentity >= 3) break;
+        shownIdentity++;
+        wq_grant(g);
+        uint8_t value[2048];
+        ssize_t len = getxattr(g.fileSystemRepresentation, "com.apple.containermanager.identity", value, sizeof(value), 0, 0);
+        if (len < 0) { line(@"%@: %@", g.lastPathComponent, wq_dbg_errno(errno)); continue; }
+        NSMutableString *hex = [NSMutableString new];
+        for (ssize_t i = 0; i < MIN(len, (ssize_t)96); i++) [hex appendFormat:@"%02x", value[i]];
+        line(@"%@: %zd bytes · %@ · strings: %@", g.lastPathComponent, len, hex, wq_dbg_strings(value, value + len));
+    }
+
+    // 7. Each group folder in detail (first 10).
+    line(@"\n== 7. Group folders in detail");
     NSUInteger n = 0;
     for (NSString *g in groups) {
-        if (n++ >= 30) break;
+        if (n++ >= 10) break;
         NSString *before = wq_dbg_xattr(g);
         BOOL granted = wq_grant(g);
         line(@"-- %@", g.lastPathComponent);

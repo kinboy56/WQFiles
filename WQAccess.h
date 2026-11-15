@@ -254,6 +254,8 @@ void wq_full_scan_stop(void);
 BOOL wq_full_scan_was_declined(void);
 void wq_set_container_list_provider(NSArray<NSString *> *_Nullable (*_Nullable provider)(NSString *_Nullable storeHint));
 void wq_set_container_label_resolver(NSString *_Nullable (*_Nullable resolver)(NSString *path));
+// App Group folder -> group id, consulted after the metadata plist.
+void wq_set_group_label_resolver(NSString *_Nullable (*_Nullable resolver)(NSString *path));
 
 // Backups of overwritten or deleted files, mirrored by original path.
 NSString *wq_backup_root(void);
