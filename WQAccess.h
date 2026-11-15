@@ -261,4 +261,18 @@ NSString *wq_app_backup_root(void);
 BOOL wq_is_backup_storage_path(NSString *path);
 NSString *_Nullable wq_backup_original_path(NSString *backupPath);
 
+
+
+// Durable directory-by-directory measurement for user-started scan tasks.
+// scope is stable (Apps/Clean); taskID changes only for an explicit fresh scan.
+// performIO serializes one directory with foreground mutations, yielding between
+// directories. Restored byte counts describe measurements taken over time.
+WQMeasureResult wq_measure_tree_resumable(NSString *dir, NSString *scope, NSString *taskID,
+    WQScanCancellation *_Nullable cancellation, unsigned long long *_Nullable bytes,
+    void (^performIO)(void (^work)(void)));
+
+// Cooperative suspension at scan boundaries; never waits on the mutation queue.
+void wq_scan_set_paused(BOOL paused);
+BOOL wq_scan_wait(WQScanCancellation *_Nullable cancellation);
+
 NS_ASSUME_NONNULL_END

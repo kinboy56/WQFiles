@@ -76,8 +76,25 @@ new files.
   into a normal verified backup of that app, ready to restore; data that says
   it belongs to a different app asks first. Show all apps, only Apple's, only others, only backed-up
   ones, or only installed or offloaded ones (when nearly every app's state can be read); long-press to copy the bundle ID or container path.
-  Apps and the Cache Cleaner keep their list between visits and rescan on
-  their own after 10 minutes; pull down to rescan any time. `tmp` is intentionally ephemeral: clear removes it, but app
+  Apps and the Cache Cleaner keep their last results, including across app
+  launches. Scanning is a task, not a page lifetime: switch tabs or leave the
+  screen without discarding work. **Pause Scan** keeps progress; **Resume Scan**
+  continues it. Pull to refresh explicitly starts a new measurement, while the
+  previous result stays visible with its timestamp. There is no automatic
+  ten-minute rescan.
+  When iOS backgrounds the app, scan workers pause at a work boundary and
+  continue on return. After termination, opening the relevant screen resumes an
+  interrupted task; an explicitly paused task stays paused. Completed inode
+  ranges and directory measurements are saved in app-private Application Support
+  (excluded from backups). A restart may replay the current directory and work
+  since the last checkpoint (writes are coalesced to about one second), not the
+  whole scan. Sizes can include earlier measurements: refresh for current sizes.
+  The filesystem is not a snapshot; cache cleaning still revalidates target
+  identities before deleting anything, and restored results are not preselected.
+  Read-only scan orchestration uses its own queue; directory measurement yields
+  the serial mutation queue between directories so other file operations can run.
+  iOS still controls when a suspended or terminated app can execute.
+  `tmp` is intentionally ephemeral: clear removes it, but app
   backups do not include it and restore leaves the current `tmp` untouched.
 - **Cache Cleaner**: cache and temp size per app, with search, Select All /
   None / Large Caches (50 MB+) and crash logs. Long-press an app to jump to its
@@ -294,12 +311,24 @@ existing release description is preserved when no new notes are supplied.
 
 ## Regression tests
 
-Run `./tests/run_all_tests.sh` on macOS with Xcode and Python 3. It runs twelve
+Run `./tests/run_all_tests.sh` on macOS with Xcode and Python 3. It runs
 portable Foundation fixture executables, the Python release fixtures, static
 browser checks, and strict iOS arm64 compilation/linkage. Logs and generated
 files stay under `.work/tests/`; the existing IPA is not replaced. With only
 Command Line Tools installed, set `WQ_SKIP_IOS_CHECK=1` to run the host tests.
 Set `WQ_ASAN=1` to compile the host fixtures with AddressSanitizer.
+
+For UIKit navigation and recovery checks on a disposable, booted simulator, run
+`WQ_SIMULATOR_UDID=<device-id> ./tests/run_scan_ui_tests.sh`. It runs the real
+Apps/Clean controllers with fixture task results, switches tabs, rebuilds a
+screen, backgrounds the app via Settings, terminates/relaunches it, and checks
+that foreground I/O can run between measurement steps. It does not open
+Simulator.app or exercise the sandbox technique. A screenshot and build artifacts
+are retained under `.work/tests/`.
+
+The host recovery fixtures also terminate a scan process without a shutdown
+callback and verify recovery in a new process, including out-of-order inode
+chunks, changed root identity, failed writes, and rapid pause/resume races.
 
 These tests use disposable files and entitlement/access doubles. They do not
 issue sandbox tokens or mutate installed app containers. Real iOS signing,

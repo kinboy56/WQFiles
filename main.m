@@ -1448,13 +1448,8 @@ static NSString *wq_info_date(struct timespec ts)
     [super viewWillDisappear:animated];
     if (_selectingBackups) [self exitBackupSelection];
     if (_selectingFiles) [self exitFileSelection];
-    if (_scanInFlight) {
-        _scanNeedsRefresh = YES;
-        [_scanCancellation cancel];
-    }
-    _scanStatus = nil;
-    [self.refreshControl endRefreshing];
-    [self updateHeader];
+    // Keep the scan, its progress and refresh state until it finishes. Leaving
+    // this view is not a request to cancel; reload supersedes an older scan.
 }
 
 - (void)viewDidDisappear:(BOOL)animated
@@ -2200,7 +2195,7 @@ static NSString *wq_info_date(struct timespec ts)
                          // Listable on iOS 27; on iOS 26 only by scanning.
                          @"/private/var/mobile/Containers/Shared/AppGroup",
                          @"/var/mobile/Containers/Shared/AppGroup"] containsObject:path];
-    dispatch_async(wq_io(), ^{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         NSString *error = nil;
         NSArray *names = wq_list(path, &error);
         NSArray *childPaths = nil;
