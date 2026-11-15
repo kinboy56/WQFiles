@@ -1448,13 +1448,8 @@ static NSString *wq_info_date(struct timespec ts)
     [super viewWillDisappear:animated];
     if (_selectingBackups) [self exitBackupSelection];
     if (_selectingFiles) [self exitFileSelection];
-    if (_scanInFlight) {
-        _scanNeedsRefresh = YES;
-        [_scanCancellation cancel];
-    }
-    _scanStatus = nil;
-    [self.refreshControl endRefreshing];
-    [self updateHeader];
+    // Keep the scan, its progress and refresh state until it finishes. Leaving
+    // this view is not a request to cancel; reload supersedes an older scan.
 }
 
 - (void)viewDidDisappear:(BOOL)animated

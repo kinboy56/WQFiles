@@ -628,12 +628,6 @@ static BOOL wq_dir_size_cancellable(NSString *dir, WQScanCancellation *cancellat
     });
 }
 
-- (void)viewWillDisappear:(BOOL)animated
-{
-    [super viewWillDisappear:animated];
-    if (_scanning) [_scanCancellation cancel];
-}
-
 - (void)setBusy:(BOOL)busy status:(NSString *)status
 {
     _busy = busy;
@@ -682,6 +676,7 @@ static void WQAppScanWatch(WQScanCancellation *cancellation, NSUInteger lastSeri
 
 - (void)scan
 {
+    // Refresh supersedes a scan; navigating away does not cancel it.
     [_scanCancellation cancel];
     WQScanCancellation *cancellation = [WQScanCancellation new];
     _scanCancellation = cancellation;

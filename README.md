@@ -77,7 +77,11 @@ new files.
   it belongs to a different app asks first. Show all apps, only Apple's, only others, only backed-up
   ones, or only installed or offloaded ones (when nearly every app's state can be read); long-press to copy the bundle ID or container path.
   Apps and the Cache Cleaner keep their list between visits and rescan on
-  their own after 10 minutes; pull down to rescan any time. `tmp` is intentionally ephemeral: clear removes it, but app
+  their own after 10 minutes; pull down to rescan any time. Read-only scans
+  continue when you switch tabs or navigate away; returning to a retained screen
+  shows the same scan or its results. This does not guarantee execution while iOS
+  suspends the app or recovery of an unfinished scan after process termination.
+  `tmp` is intentionally ephemeral: clear removes it, but app
   backups do not include it and restore leaves the current `tmp` untouched.
 - **Cache Cleaner**: cache and temp size per app, with search, Select All /
   None / Large Caches (50 MB+) and crash logs. Long-press an app to jump to its

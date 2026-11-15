@@ -428,9 +428,8 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
 - (void)viewWillDisappear:(BOOL)animated
 {
     [super viewWillDisappear:animated];
-    if (_scanning) [_scanCancellation cancel];
+    // Read-only scanning survives navigation; destructive cleaning still stops.
     if (_cleaning) [_cleanCancellation cancel];
-    [self.refreshControl endRefreshing];
 }
 
 - (NSArray<WQCacheItem *> *)visibleItems
