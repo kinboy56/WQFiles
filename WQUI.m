@@ -554,7 +554,7 @@ void wq_set_tab_busy(UIViewController *tabRoot, NSString *title, BOOL busy)
     UITabBarItem *item = tabRoot.tabBarItem;
     if (UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad) {
         item.badgeValue = nil;
-        item.title = busy ? [title stringByAppendingString:@" …"] : title;
+        item.title = busy ? [title stringByAppendingString:@" ↻"] : title;
     } else {
         item.badgeColor = UIColor.systemGrayColor;  // busy, not a warning
         item.badgeValue = busy ? @"…" : nil;
