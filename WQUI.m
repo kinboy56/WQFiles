@@ -365,6 +365,20 @@ NSString *wq_size_text(unsigned long long size)
     return [NSByteCountFormatter stringFromByteCount:(long long)size countStyle:NSByteCountFormatterCountStyleFile];
 }
 
+static NSString *const kWQPrismBackgroundChanged = @"WQPrismBackgroundChanged";
+static NSString *const kWQPlainBackgroundPref = @"WQPlainBackground";
+
+BOOL wq_prism_plain_background(void)
+{
+    return [NSUserDefaults.standardUserDefaults boolForKey:kWQPlainBackgroundPref];
+}
+
+void wq_set_prism_plain_background(BOOL plain)
+{
+    [NSUserDefaults.standardUserDefaults setBool:plain forKey:kWQPlainBackgroundPref];
+    [NSNotificationCenter.defaultCenter postNotificationName:kWQPrismBackgroundChanged object:nil];
+}
+
 // WQ Prism: a soft layered backdrop shared by the redesigned screens.
 @interface WQPrismBackgroundView : UIView
 @end
@@ -395,12 +409,22 @@ NSString *wq_size_text(unsigned long long size)
         _glows = glows;
         [self updateColors];
         [self registerForTraitChanges:@[UITraitUserInterfaceStyle.class] withAction:@selector(updateColors)];
+        [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(updateColors)
+                                                   name:kWQPrismBackgroundChanged object:nil];
     }
     return self;
 }
 
 - (void)updateColors
 {
+    BOOL plain = wq_prism_plain_background();
+    for (CAGradientLayer *g in _glows) g.hidden = plain;
+    if (plain) {
+        // Plain black (dark) or white (light), like the classic design.
+        UIColor *color = [UIColor.systemBackgroundColor resolvedColorWithTraitCollection:self.traitCollection];
+        _base.colors = @[(id)color.CGColor, (id)color.CGColor];
+        return;
+    }
     BOOL dark = self.traitCollection.userInterfaceStyle != UIUserInterfaceStyleLight;
     if (dark) {
         _base.colors = @[(id)[UIColor colorWithRed:0.024 green:0.033 blue:0.062 alpha:1].CGColor,

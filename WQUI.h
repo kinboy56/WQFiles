@@ -46,5 +46,10 @@ void wq_prism_install_background(UIViewController *vc);
 // Settings → New Design: WQ Prism (default) or the classic list design.
 BOOL wq_prism_enabled(void);
 void wq_set_prism_enabled(BOOL enabled);
+// Settings → Plain Background (issue #56): the WQ Prism screens on a plain
+// system background instead of the colored glows. Switching it updates every
+// backdrop at once.
+BOOL wq_prism_plain_background(void);
+void wq_set_prism_plain_background(BOOL plain);
 
 NS_ASSUME_NONNULL_END

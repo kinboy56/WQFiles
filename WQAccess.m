@@ -1111,15 +1111,34 @@ BOOL wq_copy_to_local(NSString *path, NSString *dest, NSString **errorText)
     return ok;
 }
 
+// Owner, then group (primary or supplementary), then others: the first class
+// that matches decides, as in the kernel's check.
+static BOOL wq_stat_allows(const struct stat *st, mode_t need)
+{
+    uid_t me = getuid();
+    if (me == 0) return YES;
+    if (st->st_uid == me) return (st->st_mode >> 6 & need) == need;
+    BOOL member = st->st_gid == getgid();
+    if (!member) {
+        gid_t groups[64];
+        int n = getgroups(64, groups);
+        for (int i = 0; i < n && !member; i++) member = groups[i] == st->st_gid;
+    }
+    if (member) return (st->st_mode >> 3 & need) == need;
+    return (st->st_mode & need) == need;
+}
+
+BOOL wq_stat_readable(const struct stat *st)
+{
+    return wq_stat_allows(st, S_ISDIR(st->st_mode) ? 5 : 4);   // r-x / r
+}
+
 NSString *wq_permission_hint(NSString *path, BOOL forWriting)
 {
     struct stat st;
     if (lstat(path.fileSystemRepresentation, &st) != 0) return nil;
     uid_t me = getuid();
-    mode_t need = forWriting ? 2 : 4;   // w / r
-    BOOL allowed = st.st_uid == me ? (st.st_mode >> 6 & need) != 0
-                 : (st.st_gid == getgid() ? (st.st_mode >> 3 & need) != 0 : (st.st_mode & need) != 0);
-    if (allowed) return nil;
+    if (wq_stat_allows(&st, forWriting ? 2 : 4)) return nil;   // w / r
     NSString *owner = st.st_uid == 0 ? @"root" : [NSString stringWithFormat:@"uid %d", (int)st.st_uid];
     return WQLocalizedFormat(@"This file belongs to %@ (mode %o) and only its owner may %@ it. WQ Files reaches the folder, but runs as mobile (uid %d), so no app can %@ this file.",
             owner, st.st_mode & 07777, forWriting ? WQLocalized(@"change") : WQLocalized(@"read"), (int)me, forWriting ? WQLocalized(@"change") : WQLocalized(@"open"));

@@ -82,6 +82,11 @@ BOOL wq_copy_to_local(NSString *path, NSString *dest, NSString *_Nullable *_Null
 // explanation for the user; nil if the owner and mode allow it.
 NSString *_Nullable wq_permission_hint(NSString *path, BOOL forWriting);
 
+// Whether the owner, group and mode of `st` let this app (uid, gid and its
+// supplementary groups) read the item; for folders, read and search. The
+// folder lists use it to dim what can't be opened (issue #57).
+BOOL wq_stat_readable(const struct stat *st);
+
 // Reads `length` bytes at `offset` (fewer at the end of the file).
 NSData *_Nullable wq_read_range(NSString *path, unsigned long long offset, NSUInteger length,
                                 NSString *_Nullable *_Nullable errorText);

@@ -63,6 +63,9 @@ static BOOL wq_regular_file_for_ui(NSString *path)
 @property (nonatomic) unsigned long long size;
 @property (nonatomic) mode_t mode;
 @property (nonatomic) uid_t uid;
+// Owner and mode keep this app out (issue #57): the row is dimmed and a tap
+// explains why instead of opening it.
+@property (nonatomic) BOOL unreadable;
 @property (nonatomic, strong) NSDate *modified;
 @property (nonatomic, strong) NSDate *created;
 @property (nonatomic) NSInteger childCount;   // folders, with Show Item Counts on; -1 unknown
@@ -2316,6 +2319,7 @@ static NSString *wq_info_date(struct timespec ts)
                 item.size = (unsigned long long)st.st_size;
                 item.mode = st.st_mode;
                 item.uid = st.st_uid;
+                item.unreadable = !item.isLink && (item.isDir || item.isRegular) && !wq_stat_readable(&st);
                 item.modified = [NSDate dateWithTimeIntervalSince1970:st.st_mtimespec.tv_sec];
                 item.created = [NSDate dateWithTimeIntervalSince1970:st.st_birthtimespec.tv_sec];
             }
@@ -2452,11 +2456,18 @@ static NSString *wq_info_date(struct timespec ts)
     // Container lists: the bundle id (issue #27); the folder's UUID is in its path.
     if (item.label) detail = WQLocalizedFormat(@"%@\n%@", item.bundleID.length ? item.bundleID : item.name, detail);
     if (item.isLink) detail = [WQLocalized(@"symlink · ") stringByAppendingString:detail];
+    if (item.unreadable) detail = WQLocalizedFormat(@"%@ · %@", WQLocalized(@"No access"), detail);
     c.secondaryText = detail;
     c.secondaryTextProperties.color = UIColor.secondaryLabelColor;
     UIImage *appIcon = item.bundleID ? wq_app_icon(item.bundleID) : nil;
-    c.image = appIcon ?: [UIImage systemImageNamed:item.isDir ? @"folder.fill" : (item.isLink ? @"link" : @"doc")];
+    c.image = appIcon ?: [UIImage systemImageNamed:item.unreadable ? (item.isDir ? @"lock.fill" : @"lock.doc")
+                                                 : item.isDir ? @"folder.fill" : (item.isLink ? @"link" : @"doc")];
     if (appIcon) c.imageProperties.maximumSize = CGSizeMake(36, 36);
+    if (item.unreadable) {
+        c.textProperties.color = UIColor.tertiaryLabelColor;
+        c.secondaryTextProperties.color = UIColor.tertiaryLabelColor;
+        c.imageProperties.tintColor = UIColor.tertiaryLabelColor;
+    }
     cell.contentConfiguration = c;
     if (_selectingFiles) {
         cell.accessoryType = [_selectedFiles containsObject:item.path]
@@ -2508,6 +2519,13 @@ static NSString *wq_info_date(struct timespec ts)
     if (indexPath.section != 0 || (NSUInteger)indexPath.row >= _items.count) return;
     WQItem *item = _items[(NSUInteger)indexPath.row];
     UIViewController *next;
+    if (item.unreadable) {
+        NSString *owner = item.uid == 0 ? @"root" : [NSString stringWithFormat:@"uid %u", item.uid];
+        wq_alert(self, WQLocalized(@"No access"),
+                 WQLocalizedFormat(@"This item belongs to %@ (mode %o). WQ Files runs as mobile (uid %d) and can't open it; no app without root can.",
+                                   owner, item.mode & 07777, (int)getuid()));
+        return;
+    }
     if (item.isLink) {
         wq_alert(self, @"Symbolic link",
                  @"WQ Files does not follow symbolic links for viewing, sharing or editing. Use Copy Path to open the target explicitly.");
@@ -5144,7 +5162,7 @@ static NSString *const kWQTroubleshootingFooter =
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    return section == 0 ? 6 : section == 1 ? 3 : 1;
+    return section == 0 ? 7 : section == 1 ? 3 : 1;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
@@ -5156,10 +5174,11 @@ static NSString *const kWQTroubleshootingFooter =
 {
     if (section == 2) return WQLocalized(kWQTroubleshootingFooter);
     if (section != 0) return nil;
-    return [NSString stringWithFormat:@"%@\n\n%@\n\n%@",
+    return [NSString stringWithFormat:@"%@\n\n%@\n\n%@\n\n%@",
             WQLocalized(@"Allow Deleting: when off, nothing can be deleted: no Delete or swipe to delete in folders and backups, no Clear Data in Apps and no cleaning in the Cache Cleaner. Saving, moving and restoring still work.\n\nShow Item Counts: shows how many items each folder holds. Every subfolder has to be listed for this, which slows down folders with many subfolders, especially in other apps' data."),
             WQLocalized(@"Keep Data Before Restore: restoring an app or file backup first backs up what's there now, so a failed restore can be undone. When off, that backup is deleted once the restore succeeded."),
-            WQLocalized(@"Reopen Last Folder: WQ Files starts in the folder you were in. Check for Updates: twice a day WQ Files reads the public release list on GitHub and shows a note when a new version is out; nothing about your device is sent.")];
+            WQLocalized(@"Reopen Last Folder: WQ Files starts in the folder you were in. Check for Updates: twice a day WQ Files reads the public release list on GitHub and shows a note when a new version is out; nothing about your device is sent."),
+            WQLocalized(@"Plain Background: a plain black (or white) background instead of the colored one.")];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -5171,8 +5190,8 @@ static NSString *const kWQTroubleshootingFooter =
     UIListContentConfiguration *c = [UIListContentConfiguration subtitleCellConfiguration];
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
     if (indexPath.section == 0) {
-        NSArray<NSString *> *titles = @[@"Allow Deleting", @"Show Item Counts", @"Keep Data Before Restore", @"Reopen Last Folder", @"Check for Updates", @"New Design"];
-        NSArray<NSString *> *symbols = @[@"trash.slash", @"number", @"clock.arrow.circlepath", @"arrow.uturn.forward", @"arrow.down.circle", @"paintbrush"];
+        NSArray<NSString *> *titles = @[@"Allow Deleting", @"Show Item Counts", @"Keep Data Before Restore", @"Reopen Last Folder", @"Check for Updates", @"New Design", @"Plain Background"];
+        NSArray<NSString *> *symbols = @[@"trash.slash", @"number", @"clock.arrow.circlepath", @"arrow.uturn.forward", @"arrow.down.circle", @"paintbrush", @"square.fill"];
         c.text = WQLocalizedNullable(titles[(NSUInteger)indexPath.row]);
         c.image = [UIImage systemImageNamed:symbols[(NSUInteger)indexPath.row]];
         UISwitch *toggle = [UISwitch new];
@@ -5181,6 +5200,7 @@ static NSString *const kWQTroubleshootingFooter =
                    : indexPath.row == 3 ? ![defaults boolForKey:kWQReopenOffPref]
                    : indexPath.row == 4 ? ![defaults boolForKey:kWQUpdateCheckOffPref]
                    : indexPath.row == 5 ? wq_prism_enabled()
+                   : indexPath.row == 6 ? wq_prism_plain_background()
                    : wq_deleting_allowed();
         [toggle addAction:[UIAction actionWithHandler:^(UIAction *action) {
             BOOL on = ((UISwitch *)action.sender).isOn;
@@ -5195,6 +5215,7 @@ static NSString *const kWQTroubleshootingFooter =
                 wq_set_prism_enabled(on);
                 [self dismissViewControllerAnimated:YES completion:^{ wq_apply_design(); }];
             }
+            else if (indexPath.row == 6) wq_set_prism_plain_background(on);
             else wq_set_deleting_allowed(on);
         }] forControlEvents:UIControlEventValueChanged];
         cell.contentConfiguration = c;
@@ -6018,8 +6039,77 @@ static NSString *const kWQTroubleshootingFooter =
 
 #pragma mark - App
 
+// iOS older than 26 (issue #58): the sandbox escape WQ Files is built on
+// (worse_query) doesn't exist there, so every folder is refused after a long
+// scan. Sideloading can install the app anyway, ignoring MinimumOSVersion;
+// this screen replaces the whole app and nothing is scanned or opened.
+static BOOL wq_ios_supported(void)
+{
+    return NSProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26;
+}
+
+@interface WQUnsupportedViewController : UIViewController
+@end
+
+@implementation WQUnsupportedViewController
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.view.backgroundColor = UIColor.systemBackgroundColor;
+    NSOperatingSystemVersion os = NSProcessInfo.processInfo.operatingSystemVersion;
+    NSString *version = os.patchVersion
+        ? [NSString stringWithFormat:@"%ld.%ld.%ld", (long)os.majorVersion, (long)os.minorVersion, (long)os.patchVersion]
+        : [NSString stringWithFormat:@"%ld.%ld", (long)os.majorVersion, (long)os.minorVersion];
+
+    UIImageView *icon = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"exclamationmark.triangle.fill"]];
+    icon.tintColor = UIColor.systemOrangeColor;
+    icon.preferredSymbolConfiguration = [UIImageSymbolConfiguration configurationWithPointSize:52 weight:UIImageSymbolWeightSemibold];
+    icon.contentMode = UIViewContentModeScaleAspectFit;
+
+    UILabel *title = [UILabel new];
+    title.text = WQLocalizedFormat(@"iOS %@ isn't supported", version);
+    title.font = [UIFont preferredFontForTextStyle:UIFontTextStyleTitle2];
+    title.adjustsFontForContentSizeCategory = YES;
+    title.textAlignment = NSTextAlignmentCenter;
+    title.numberOfLines = 0;
+
+    UILabel *body = [UILabel new];
+    body.text = WQLocalized(@"WQ Files needs iOS 26 or 27. The sandbox escape it uses only exists there, so on this version every folder stays closed.\n\nOn iOS 17 and 18, Cyanide can browse these folders.");
+    body.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
+    body.adjustsFontForContentSizeCategory = YES;
+    body.textColor = UIColor.secondaryLabelColor;
+    body.textAlignment = NSTextAlignmentCenter;
+    body.numberOfLines = 0;
+
+    UIButtonConfiguration *config = [UIButtonConfiguration filledButtonConfiguration];
+    config.title = WQLocalized(@"Cyanide on GitHub");
+    config.cornerStyle = UIButtonConfigurationCornerStyleCapsule;
+    UIButton *cyanide = [UIButton buttonWithConfiguration:config primaryAction:[UIAction actionWithHandler:^(UIAction *__unused a) {
+        [UIApplication.sharedApplication openURL:[NSURL URLWithString:@"https://github.com/kolbicz/Cyanide"] options:@{} completionHandler:nil];
+    }]];
+
+    UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[icon, title, body, cyanide]];
+    stack.axis = UILayoutConstraintAxisVertical;
+    stack.alignment = UIStackViewAlignmentCenter;
+    stack.spacing = 16;
+    [stack setCustomSpacing:28 afterView:body];
+    stack.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:stack];
+    UILayoutGuide *g = self.view.readableContentGuide;
+    [NSLayoutConstraint activateConstraints:@[
+        [stack.leadingAnchor constraintEqualToAnchor:g.leadingAnchor constant:8],
+        [stack.trailingAnchor constraintEqualToAnchor:g.trailingAnchor constant:-8],
+        [stack.centerYAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.centerYAnchor],
+    ]];
+    wq_log(@"iOS %@ is not supported (WQ Files needs iOS 26 or 27); nothing is scanned", version);
+}
+
+@end
+
 static UIViewController *wq_make_root_view_controller(void)
 {
+    if (!wq_ios_supported()) return [WQUnsupportedViewController new];
     if (wq_prism_enabled()) return [WQPrismTabController new];
     return [[WQNavigationController alloc] initWithRootViewController:[WQRootViewController new]];
 }
