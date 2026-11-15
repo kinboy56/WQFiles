@@ -969,3 +969,9 @@
 "iOS %@ isn't supported" = "iOS %@ غير مدعوم";
 "WQ Files needs iOS 26 or 27. The sandbox escape it uses only exists there, so on this version every folder stays closed.\n\nOn iOS 17 and 18, Cyanide can browse these folders." = "يحتاج WQ Files إلى iOS 26 أو 27. الهروب من الـ sandbox الذي يستخدمه موجود هناك فقط، لذلك تبقى كل المجلدات مغلقة على هذا الإصدار.\n\nعلى iOS 17 و18 يمكن لـ Cyanide تصفّح هذه المجلدات.";
 "Cyanide on GitHub" = "Cyanide على GitHub";
+"Scan paused" = "Scan paused";
+"Scan queued; previous results kept" = "Scan queued; previous results kept";
+"Last scanned %@ · Pull to refresh" = "Last scanned %@ · Pull to refresh";
+"Pause Scan" = "Pause Scan";
+"Resume Scan" = "Resume Scan";
+"Could not save scan state. Keep WQ Files open." = "Could not save scan state. Keep WQ Files open.";

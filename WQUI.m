@@ -5,6 +5,7 @@
 //
 
 #import "WQUI.h"
+#import "WQScanTask.h"
 #import "WQAccess.h"
 #import "WQLaunchServices.h"
 #import <fcntl.h>
@@ -308,6 +309,29 @@ dispatch_queue_t wq_io(void)
     static dispatch_once_t once;
     dispatch_once(&once, ^{ queue = dispatch_queue_create("wqfiles.io", DISPATCH_QUEUE_SERIAL); });
     return queue;
+}
+
+dispatch_queue_t wq_scan_queue(void)
+{
+    static dispatch_queue_t queue;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        queue = dispatch_queue_create("wqfiles.scans", dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_UTILITY, 0));
+        [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *__unused note) {
+            wq_scan_set_paused(YES);
+            [WQScanTask setPaused:YES];
+        }];
+        [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationWillEnterForegroundNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *__unused note) {
+            wq_scan_set_paused(NO);
+            [WQScanTask setPaused:NO];
+        }];
+    });
+    return queue;
+}
+
+void wq_scan_read(void (^work)(void))
+{
+    dispatch_sync(wq_io(), work);
 }
 
 static NSString *const kWQDeletingDisabledPref = @"WQDeletingDisabled";

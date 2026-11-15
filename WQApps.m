@@ -7,6 +7,8 @@
 #import "WQApps.h"
 #import "WQDir.h"
 #import "WQUI.h"
+#import "WQScanTask.h"
+#import "WQScanJournal.h"
 #import "WQSharing.h"
 #import "WQAccess.h"
 #import "WQLaunchServices.h"
@@ -41,6 +43,11 @@
 @end
 
 @implementation WQAppsViewController {
+    WQScanTask *_scanTask;
+    NSDictionary *_shownScanResult;
+    BOOL _resumeScan;
+    BOOL _refreshingBackups;
+
     NSArray<WQAppItem *> *_apps;
     NSArray<WQAppItem *> *_visibleApps;
     NSString *_query;
@@ -53,7 +60,6 @@
     NSDictionary<NSString *, NSNumber *> *_indexRows;
     NSString *_restoreBundleID;
     WQAppItem *_importApp;
-    NSTimeInterval _lastScanFinished;
 }
 
 - (instancetype)initRestoringBundleID:(NSString *)bundleID
@@ -549,18 +555,80 @@ static NSString *wq_make_app_backup(NSString *bundleID, NSString *container, dev
     }, error);
 }
 
-static BOOL wq_dir_size_cancellable(NSString *dir, WQScanCancellation *cancellation,
+static BOOL wq_dir_size_cancellable(NSString *dir, NSString *taskID, WQScanCancellation *cancellation,
                                      unsigned long long *sizeOut, BOOL *completeOut)
 {
     if (completeOut) *completeOut = NO;
     if (sizeOut) *sizeOut = 0;
     if (cancellation.isCancelled) return NO;
     unsigned long long total = 0;
-    WQMeasureResult result = wq_measure_tree(dir, cancellation, &total);
+    WQMeasureResult result = wq_measure_tree_resumable(dir, @"apps", taskID, cancellation, &total, ^(void (^work)(void)) { wq_scan_read(work); });
     if (result == WQMeasureResultCancelled) return NO;
     if (sizeOut) *sizeOut = total;
     if (completeOut) *completeOut = result != WQMeasureResultLimited;
     return YES;
+}
+
+
+- (NSDictionary *)snapshotRows:(NSArray<WQAppItem *> *)rows note:(NSString *)note
+{
+    NSMutableArray *saved = [NSMutableArray new];
+    for (WQAppItem *item in rows) {
+        NSMutableDictionary *encoded = [WQScanEncode(item, @[@"container", @"bundleID", @"name", @"bytes", @"sizeKnown", @"hasAccess", @"hasIdentity", @"containerDevice", @"containerInode", @"installState"]) mutableCopy];
+        [saved addObject:encoded];
+    }
+    return @{@"rows": saved, @"note": note ?: @""};
+}
+
+- (void)scanTaskChanged:(NSNotification *__unused)notification
+{
+    if (_busy && !_scanning && !_scanTask.running) return; // preserve mutation progress
+    NSDictionary *result = _scanTask.result;
+    BOOL resultChanged = result && result != _shownScanResult;
+    if (resultChanged) {
+        NSMutableArray *rows = [NSMutableArray new];
+        for (id encoded in [result[@"rows"] isKindOfClass:NSArray.class] ? result[@"rows"] : @[]) {
+            if (![encoded isKindOfClass:NSDictionary.class]) continue;
+            WQAppItem *item = [WQAppItem new];
+            WQScanDecode(item, encoded, @[@"container", @"bundleID", @"name"], @[@"bytes", @"sizeKnown", @"hasAccess", @"hasIdentity", @"containerDevice", @"containerInode", @"installState"]);
+            item.backups = @[];
+            [rows addObject:item];
+        }
+        _apps = rows;
+        _shownScanResult = result;
+        [self rebuildVisibleApps];
+    }
+    _scanning = _scanTask.running;
+    _status = _scanning ? (_scanTask.paused ? WQLocalized(@"Scan paused") :
+        (_scanTask.status.length ? WQLocalized(_scanTask.status) : WQLocalized(@"Scan queued; previous results kept"))) :
+        (_scanTask.status.length ? WQLocalized(_scanTask.status) : ([result[@"note"] isKindOfClass:NSString.class] ? result[@"note"] : nil));
+    if (_scanTask.finishedAt) {
+        NSString *date = [NSDateFormatter localizedStringFromDate:_scanTask.finishedAt dateStyle:NSDateFormatterShortStyle timeStyle:NSDateFormatterShortStyle];
+        self.navigationItem.prompt = WQLocalizedFormat(@"Last scanned %@ · Pull to refresh", date);
+    }
+    _busy = _scanning;
+    if (_scanTask.persistenceFailed) self.navigationItem.prompt = WQLocalized(@"Could not save scan state. Keep WQ Files open.");
+    if (!_scanning) [self.refreshControl endRefreshing];
+    [self.tableView reloadData];
+    NSMutableArray *buttons = [NSMutableArray arrayWithObject:[self sortButton]];
+    if (_scanTask.running || _scanTask.userPaused) {
+        [buttons insertObject:[[UIBarButtonItem alloc] initWithTitle:WQLocalized(_scanTask.running ? @"Pause Scan" : @"Resume Scan")
+            style:UIBarButtonItemStylePlain target:self action:@selector(toggleScan)] atIndex:0];
+    }
+    self.navigationItem.rightBarButtonItems = buttons;
+    self.navigationController.tabBarItem.badgeValue = _scanTask.running ? @"…" : nil;
+    if (resultChanged && !_scanning && (self.view.window || _restoreBundleID)) [self refreshBackups];
+}
+
+- (void)toggleScan
+{
+    if (_scanTask.running) [_scanTask pause];
+    else { _resumeScan = YES; [self scan]; }
+}
+
+- (void)dealloc
+{
+    [NSNotificationCenter.defaultCenter removeObserver:self];
 }
 
 - (void)viewDidLoad
@@ -582,7 +650,13 @@ static BOOL wq_dir_size_cancellable(NSString *dir, WQScanCancellation *cancellat
     self.tableView.tableHeaderView = wq_device_header(self.view.bounds.size.width);
     self.refreshControl = [UIRefreshControl new];
     [self.refreshControl addTarget:self action:@selector(userRefresh) forControlEvents:UIControlEventValueChanged];
-    [self scan];
+    _scanTask = [WQScanTask taskNamed:@"apps"];
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(scanTaskChanged:) name:WQScanTaskChangedNotification object:_scanTask];
+    [self scanTaskChanged:nil];
+    if (!_scanTask.running && !_scanTask.userPaused && (!_scanTask.result || _scanTask.interrupted)) {
+        _resumeScan = _scanTask.interrupted;
+        [self scan];
+    }
 }
 
 // Pull to refresh: rescan the containers instead of reusing the shared scan,
@@ -597,17 +671,14 @@ static BOOL wq_dir_size_cancellable(NSString *dir, WQScanCancellation *cancellat
 - (void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
-    if (_scanning && _scanCancellation.isCancelled) { [self scan]; return; }
-    if (_scanning || !_apps) return;
-    // The start screen keeps this screen between visits: rescan on its own
-    // only when the list is old (pull to refresh rescans any time). Backups
-    // may have been made or deleted elsewhere, so reread those (cheap).
-    if (NSDate.date.timeIntervalSinceReferenceDate - _lastScanFinished > 600.0) { [self scan]; return; }
-    [self refreshBackups];
+    [self scanTaskChanged:nil];
+    if (!_scanning && _apps) [self refreshBackups];
 }
+
 
 - (void)refreshBackups
 {
+    _refreshingBackups = YES;
     NSArray<WQAppItem *> *apps = _apps;
     NSUInteger generation = _scanGeneration;
     dispatch_async(wq_io(), ^{
@@ -615,15 +686,18 @@ static BOOL wq_dir_size_cancellable(NSString *dir, WQScanCancellation *cancellat
         for (WQAppItem *app in apps) [lists addObject:app.bundleID.length ? wq_app_backups(app.bundleID) : @[]];
         dispatch_async(dispatch_get_main_queue(), ^{
             if (generation != self->_scanGeneration || self->_scanning) return;
+            self->_refreshingBackups = NO;
             BOOL changed = NO;
             for (NSUInteger i = 0; i < apps.count; i++) {
                 if ([apps[i].backups isEqualToArray:lists[i]]) continue;
                 apps[i].backups = lists[i];
                 changed = YES;
             }
-            if (!changed) return;
-            [self rebuildVisibleApps];
-            [self.tableView reloadData];
+            if (changed) {
+                [self rebuildVisibleApps];
+                [self.tableView reloadData];
+            }
+            [self offerPendingRestore];
         });
     });
 }
@@ -677,29 +751,39 @@ static void WQAppScanWatch(WQScanCancellation *cancellation, NSUInteger lastSeri
 - (void)scan
 {
     // Refresh supersedes a scan; navigating away does not cancel it.
-    [_scanCancellation cancel];
     WQScanCancellation *cancellation = [WQScanCancellation new];
+    NSUInteger taskGeneration = [_scanTask beginFresh:!_resumeScan cancel:^{ [cancellation cancel]; }];
+    _resumeScan = NO;
+    if (!taskGeneration) return;
+    NSString *taskID = _scanTask.identifier;
     _scanCancellation = cancellation;
     NSUInteger generation = ++_scanGeneration;
     _scanning = YES;
-    [self setBusy:YES status:WQLocalizedNullable(@"Finding apps…")];
+    _refreshingBackups = NO;
+    [self setBusy:YES status:WQLocalizedNullable(@"Scan queued; previous results kept")];
     NSString *home = [NSHomeDirectory() stringByResolvingSymlinksInPath];
-    WQAppScanStep(@"finding app containers");
-    WQAppScanWatch(cancellation, 0, 0);
-    dispatch_async(wq_io(), ^{
+    dispatch_async(wq_scan_queue(), ^{
+        if (cancellation.isCancelled) return;
+        WQAppScanStep(@"finding app containers");
+        WQAppScanWatch(cancellation, 0, 0);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self->_scanTask progress:WQLocalized(@"Finding apps…") generation:taskGeneration];
+        });
         CFAbsoluteTime scanStarted = CFAbsoluteTimeGetCurrent();
         NSArray *containers = wq_enumerate(@"/private/var/mobile/Containers/Data/Application", 0, cancellation,
             ^(int64_t done, int64_t total, NSUInteger __unused f) {
                 dispatch_async(dispatch_get_main_queue(), ^{
                     if (generation != self->_scanGeneration || cancellation.isCancelled) return;
                     self->_status = WQLocalizedFormat(@"Finding apps… %lld%%", total ? (long long)(done * 100 / total) : 0);
-                    [self.tableView reloadData];
+                    [self->_scanTask progress:self->_status generation:taskGeneration];
+                [self.tableView reloadData];
                 });
             });
         if (!cancellation.isCancelled && !wq_display_names_loaded()) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 if (generation != self->_scanGeneration || cancellation.isCancelled) return;
                 self->_status = WQLocalized(@"Reading app names…");
+                [self->_scanTask progress:self->_status generation:taskGeneration];
                 [self.tableView reloadData];
             });
             WQAppScanStep(@"reading app names");
@@ -725,6 +809,7 @@ static void WQAppScanWatch(WQScanCancellation *cancellation, NSUInteger lastSeri
             dispatch_async(dispatch_get_main_queue(), ^{
                 if (generation != self->_scanGeneration || cancellation.isCancelled) return;
                 self->_status = WQLocalizedFormat(@"Measuring %lu/%lu…", (unsigned long)i, (unsigned long)containers.count);
+                [self->_scanTask progress:self->_status generation:taskGeneration];
                 [self.tableView reloadData];
             });
             NSString *shortName = c.lastPathComponent;
@@ -759,7 +844,7 @@ static void WQAppScanWatch(WQScanCancellation *cancellation, NSUInteger lastSeri
             unsigned long long appSize = 0;
             BOOL sizeKnown = NO;
             WQAppScanStep([NSString stringWithFormat:@"measuring %@ (%@)", shortName, bid ?: @"no identifier"]);
-            if (granted && hasIdentity && !wq_dir_size_cancellable(c, cancellation, &appSize, &sizeKnown)) { WQAppScanStep(nil); return; }
+            if (granted && hasIdentity && !wq_dir_size_cancellable(c, taskID, cancellation, &appSize, &sizeKnown)) { WQAppScanStep(nil); return; }
             app.bytes = appSize;
             app.sizeKnown = sizeKnown;
             if (granted && hasIdentity && !sizeKnown) sizeLimited++;
@@ -810,12 +895,9 @@ static void WQAppScanWatch(WQScanCancellation *cancellation, NSUInteger lastSeri
         else if (limited || sizeLimited) note = WQLocalizedFormat(@"%lu containers · %lu with limited access, identity, size, or no identifier. See Log.", (unsigned long)apps.count, (unsigned long)(limited + sizeLimited));
         dispatch_async(dispatch_get_main_queue(), ^{
             if (generation != self->_scanGeneration || cancellation.isCancelled) return;
-            self->_scanning = NO;
-            self->_lastScanFinished = NSDate.date.timeIntervalSinceReferenceDate;
-            self->_apps = apps;
-            [self rebuildVisibleApps];
-            [self.refreshControl endRefreshing];
-            [self setBusy:NO status:note];
+            NSMutableDictionary *snapshot = [[self snapshotRows:apps note:note] mutableCopy];
+            snapshot[@"complete"] = @(containers != nil);
+            [self->_scanTask finish:snapshot generation:taskGeneration];
             [self offerPendingRestore];
         });
     });
@@ -1292,7 +1374,11 @@ static void WQAppScanWatch(WQScanCancellation *cancellation, NSUInteger lastSeri
 - (void)offerPendingRestore
 {
     NSString *bid = _restoreBundleID;
-    if (!bid || !self.view.window || self.presentedViewController) return;
+    if (!bid || _refreshingBackups || !self.view.window || self.presentedViewController) return;
+    if (self.navigationController && self.navigationController.topViewController != self) return;
+    if (self.tabBarController && self.tabBarController.selectedViewController != self.navigationController) return;
+    for (UIViewController *parent = self.parentViewController; parent; parent = parent.parentViewController)
+        if (parent.presentedViewController) return;
     _restoreBundleID = nil;
     WQAppItem *app = nil;
     for (WQAppItem *candidate in _apps) if ([candidate.bundleID isEqualToString:bid]) { app = candidate; break; }

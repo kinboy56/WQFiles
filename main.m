@@ -2195,7 +2195,7 @@ static NSString *wq_info_date(struct timespec ts)
                          // Listable on iOS 27; on iOS 26 only by scanning.
                          @"/private/var/mobile/Containers/Shared/AppGroup",
                          @"/var/mobile/Containers/Shared/AppGroup"] containsObject:path];
-    dispatch_async(wq_io(), ^{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         NSString *error = nil;
         NSArray *names = wq_list(path, &error);
         NSArray *childPaths = nil;

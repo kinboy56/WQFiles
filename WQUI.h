@@ -52,4 +52,11 @@ void wq_set_prism_enabled(BOOL enabled);
 BOOL wq_prism_plain_background(void);
 void wq_set_prism_plain_background(BOOL plain);
 
+
+
+// Read-only scan orchestration runs separately from mutations. Directory-sized
+// measurement steps rejoin wq_io(), so foreground requests can run between them.
+dispatch_queue_t wq_scan_queue(void);
+void wq_scan_read(void (^work)(void));
+
 NS_ASSUME_NONNULL_END
