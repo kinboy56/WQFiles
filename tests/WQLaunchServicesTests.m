@@ -192,6 +192,13 @@ static void TestContainerMapping(NSString *path)
     WQCheck(wq_bundle_id_for_container([kBundleContainer stringByAppendingString:@"/Example.app"]) == nil);
     // A display name whose length is a multiple of 4 has no terminator.
     WQCheck([wq_display_name(@"com.example.app") isEqualToString:@"AppName8"]);
+    // A container no record can be trusted for is still listed (UC Browser
+    // missing from Apps on iOS 26.5); its label comes from the folder.
+    NSArray<NSString *> *all = wq_ls_container_paths(nil);
+    WQCheck([all containsObject:kAppPath]);
+    WQCheck([all containsObject:kPluginPath]);
+    WQCheck([all containsObject:kSharedPath]);
+    WQCheck([[NSSet setWithArray:all] count] == all.count);
 }
 
 // iOS 27.3 (issue #50): app records as on 27.2 (0x25c: +0x0c id, +0x6c

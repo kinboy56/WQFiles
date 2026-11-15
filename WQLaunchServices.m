@@ -1184,21 +1184,40 @@ NSDictionary<NSString *, NSString *> *wq_ls_group_ids_from_store(NSData *data)
     return result;
 }
 
-// Every data container the store maps plus the group containers of the
-// installed apps (not mapped to an owner; the list only needs them).
+// Every container path the store names: the data containers its records map
+// plus every other app, extension and group container path string in it.
+// Records whose container the parser can't pair with a bundle id (or that two
+// records claim) still name a real folder; leaving them out hid installed
+// apps (iOS 26.5: UC Browser missing from Apps). Those folders get their
+// label from the container itself (attributes, metadata plist).
 static NSArray<NSString *> *wq_ls_all_paths(NSData *data, NSDictionary *containers)
 {
     NSMutableSet<NSString *> *all = [NSMutableSet setWithArray:containers.allKeys];
-    static const char needle[] = "/mobile/Containers/Shared/AppGroup/";
-    const uint8_t *bytes = data.bytes, *cursor = bytes, *end = bytes + data.length;
-    while (cursor < end) {
-        const uint8_t *hit = memmem(cursor, (size_t)(end - cursor), needle, sizeof(needle) - 1);
-        if (!hit) break;
-        cursor = hit + sizeof(needle) - 1;
-        if ((size_t)(end - cursor) < 36) break;
-        NSString *uuid = [[NSString alloc] initWithBytes:cursor length:36 encoding:NSASCIIStringEncoding];
-        if (!uuid || ![[NSUUID alloc] initWithUUIDString:uuid]) continue;
-        [all addObject:[@"/private/var/mobile/Containers/Shared/AppGroup/" stringByAppendingString:uuid.uppercaseString]];
+    NSMutableSet<NSString *> *seen = [NSMutableSet new];   // case-insensitive: mapped keys keep the store's spelling
+    for (NSString *key in containers.allKeys) [seen addObject:key.uppercaseString];
+    static const char *const needles[] = {
+        "/mobile/Containers/Shared/AppGroup/",
+        "/mobile/Containers/Data/Application/",
+        "/mobile/Containers/Data/PluginKitPlugin/",
+    };
+    const uint8_t *bytes = data.bytes, *end = bytes + data.length;
+    for (size_t i = 0; i < sizeof(needles) / sizeof(needles[0]); i++) {
+        const char *needle = needles[i];
+        size_t needleLength = strlen(needle);
+        NSString *prefix = [@"/private/var" stringByAppendingString:@(needle)];
+        const uint8_t *cursor = bytes;
+        while (cursor < end) {
+            const uint8_t *hit = memmem(cursor, (size_t)(end - cursor), needle, needleLength);
+            if (!hit) break;
+            cursor = hit + needleLength;
+            if ((size_t)(end - cursor) < 36) break;
+            NSString *uuid = [[NSString alloc] initWithBytes:cursor length:36 encoding:NSASCIIStringEncoding];
+            if (!uuid || ![[NSUUID alloc] initWithUUIDString:uuid]) continue;
+            NSString *path = [prefix stringByAppendingString:uuid.uppercaseString];
+            if ([seen containsObject:path.uppercaseString]) continue;
+            [seen addObject:path.uppercaseString];
+            [all addObject:path];
+        }
     }
     return all.allObjects;
 }
