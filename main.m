@@ -9,6 +9,9 @@
 //
 
 #import <UIKit/UIKit.h>
+#ifndef WQ_DEBUG_LABELS
+#define WQ_DEBUG_LABELS 0
+#endif
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <sys/sysctl.h>
 #import <sys/utsname.h>
@@ -5125,6 +5128,41 @@ static void wq_confirm_reset_access_cache(UIViewController *host, void (^done)(v
     [host presentViewController:alert animated:YES completion:nil];
 }
 
+// Debug builds (WQ_DEBUG=1 ./build.sh): Settings → Troubleshooting → Group
+// Label Report runs wq_debug_group_label_report and shares it as a file.
+static const NSInteger kWQTroubleshootingRows = WQ_DEBUG_LABELS ? 2 : 1;
+
+static void wq_share_group_label_report(UIViewController *host, UIView *source)
+{
+#if WQ_DEBUG_LABELS
+    UIAlertController *wait = wq_alert_controller(@"Group Label Report", @"Collecting… this can take a minute.", UIAlertControllerStyleAlert);
+    [host presentViewController:wait animated:YES completion:nil];
+    __weak UIViewController *weakHost = host;
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSString *report = wq_debug_group_label_report();
+        NSDateFormatter *f = [NSDateFormatter new];
+        f.dateFormat = @"yyyyMMdd-HHmmss";
+        NSString *path = [NSTemporaryDirectory() stringByAppendingPathComponent:
+                          [NSString stringWithFormat:@"WQ-group-labels-%@.txt", [f stringFromDate:NSDate.date]]];
+        [report writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];
+        wq_log(@"debug: group label report written (%lu bytes)", (unsigned long)report.length);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIViewController *me = weakHost;
+            [wait dismissViewControllerAnimated:YES completion:^{
+                if (!me) return;
+                UIActivityViewController *share = [[UIActivityViewController alloc]
+                    initWithActivityItems:@[[NSURL fileURLWithPath:path]] applicationActivities:nil];
+                share.popoverPresentationController.sourceView = source ?: me.view;
+                share.popoverPresentationController.sourceRect = (source ?: me.view).bounds;
+                [me presentViewController:share animated:YES completion:nil];
+            }];
+        });
+    });
+#else
+    (void)host; (void)source;
+#endif
+}
+
 static NSString *const kWQTroubleshootingFooter =
     @"Reset Access Cache: use it when folders stay empty or the startup check says sandbox access failed. It repairs WQ Files' own cache folder in its App Group; nothing is deleted.";
 
@@ -5162,7 +5200,7 @@ static NSString *const kWQTroubleshootingFooter =
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    return section == 0 ? 7 : section == 1 ? 3 : 1;
+    return section == 0 ? 7 : section == 1 ? 3 : kWQTroubleshootingRows;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
@@ -5224,8 +5262,9 @@ static NSString *const kWQTroubleshootingFooter =
         return cell;
     }
     if (indexPath.section == 2) {
-        c.text = WQLocalizedNullable(@"Reset Access Cache");
-        c.image = [UIImage systemImageNamed:@"arrow.counterclockwise.circle"];
+        BOOL report = indexPath.row == 1;
+        c.text = report ? @"Group Label Report (debug)" : WQLocalizedNullable(@"Reset Access Cache");
+        c.image = [UIImage systemImageNamed:report ? @"ladybug" : @"arrow.counterclockwise.circle"];
         cell.contentConfiguration = c;
         cell.accessoryType = UITableViewCellAccessoryNone;
         return cell;
@@ -5246,7 +5285,11 @@ static NSString *const kWQTroubleshootingFooter =
 {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     if (indexPath.section == 0) return;
-    if (indexPath.section == 2) { wq_confirm_reset_access_cache(self, nil); return; }
+    if (indexPath.section == 2) {
+        if (indexPath.row == 1) wq_share_group_label_report(self, [tableView cellForRowAtIndexPath:indexPath]);
+        else wq_confirm_reset_access_cache(self, nil);
+        return;
+    }
     if (indexPath.row == 0) {
         [self.navigationController pushViewController:[WQLanguageViewController new] animated:YES];
     } else if (indexPath.row == 1) {
@@ -5700,7 +5743,7 @@ static NSString *const kWQTroubleshootingFooter =
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
     // System Groups is the extra last row, on iOS 27 only.
-    if (section == 3) return 1;
+    if (section == 3) return kWQTroubleshootingRows;
     if (section == 2) return 7;
     return section == 0 ? (NSInteger)_locations.count + (wq_system_areas_reachable() ? 1 : 0) : 8;
 }
@@ -5734,8 +5777,9 @@ static NSString *const kWQTroubleshootingFooter =
     cell.accessoryView = nil;
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
     if (indexPath.section == 3) {
-        c.text = WQLocalized(@"Reset Access Cache");
-        c.image = [UIImage systemImageNamed:@"arrow.counterclockwise.circle"];
+        BOOL report = indexPath.row == 1;
+        c.text = report ? @"Group Label Report (debug)" : WQLocalized(@"Reset Access Cache");
+        c.image = [UIImage systemImageNamed:report ? @"ladybug" : @"arrow.counterclockwise.circle"];
         cell.contentConfiguration = c;
         cell.accessoryType = UITableViewCellAccessoryNone;
         return cell;
@@ -5804,7 +5848,11 @@ static NSString *const kWQTroubleshootingFooter =
         [self.navigationController pushViewController:[WQLanguageViewController new] animated:YES];
         return;
     }
-    if (indexPath.section == 3) { wq_confirm_reset_access_cache(self, nil); return; }
+    if (indexPath.section == 3) {
+        if (indexPath.row == 1) wq_share_group_label_report(self, [tableView cellForRowAtIndexPath:indexPath]);
+        else wq_confirm_reset_access_cache(self, nil);
+        return;
+    }
     if (indexPath.section == 2) return;
     UIViewController *next = nil;
     if (indexPath.section == 0) {

@@ -1321,6 +1321,24 @@ NSString *wq_bundle_id_for_container(NSString *path)
     }
 }
 
+NSString *wq_ls_store_path(void)
+{
+    @synchronized (wq_ls_lock()) {
+        wq_load_ls_names_locked();
+        return gLSStorePath;
+    }
+}
+
+NSArray<NSString *> *wq_ls_known_bundle_ids(void)
+{
+    @synchronized (wq_ls_lock()) {
+        wq_load_ls_names_locked();
+        NSMutableSet *ids = [NSMutableSet new];
+        for (id value in gLSContainers.allValues) if ([value isKindOfClass:NSString.class]) [ids addObject:value];
+        return [ids.allObjects sortedArrayUsingSelector:@selector(compare:)];
+    }
+}
+
 NSArray<NSString *> *wq_ls_bundle_containers(void)
 {
     @synchronized (wq_ls_lock()) {

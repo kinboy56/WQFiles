@@ -3439,3 +3439,280 @@ NSString *wq_container_label(NSString *dir)
     id ident = [plist isKindOfClass:NSDictionary.class] ? plist[@"MCMMetadataIdentifier"] : nil;
     return [ident isKindOfClass:NSString.class] ? ident : nil;
 }
+
+#if WQ_DEBUG_LABELS
+#pragma mark - Debug: App Group label report
+
+static NSString *wq_dbg_errno(int e) { return [NSString stringWithFormat:@"errno %d (%s)", e, strerror(e)]; }
+
+static NSString *wq_dbg_xattr(NSString *dir)
+{
+    char buf[512];
+    ssize_t len = getxattr(dir.fileSystemRepresentation, "com.apple.containermanager.identifier", buf, sizeof(buf) - 1, 0, 0);
+    if (len < 0) return wq_dbg_errno(errno);
+    buf[len] = 0;
+    return [NSString stringWithFormat:@"\"%s\"", buf];
+}
+
+static NSString *wq_dbg_xattr_names(NSString *dir)
+{
+    char names[4096];
+    ssize_t len = listxattr(dir.fileSystemRepresentation, names, sizeof(names), 0);
+    if (len < 0) return wq_dbg_errno(errno);
+    NSMutableArray *out = [NSMutableArray new];
+    for (ssize_t i = 0; i < len; ) {
+        NSString *name = @(names + i) ?: @"?";
+        [out addObject:name];
+        i += (ssize_t)strlen(names + i) + 1;
+    }
+    return out.count ? [out componentsJoinedByString:@", "] : @"(none)";
+}
+
+static NSString *wq_dbg_stat(NSString *path)
+{
+    struct stat st;
+    if (lstat(path.fileSystemRepresentation, &st) != 0) return wq_dbg_errno(errno);
+    return [NSString stringWithFormat:@"uid %u gid %u mode %o size %lld", st.st_uid, st.st_gid, st.st_mode & 07777, (long long)st.st_size];
+}
+
+static NSString *wq_dbg_listing(NSString *dir, NSUInteger max)
+{
+    NSString *error = nil;
+    NSArray<NSString *> *names = wq_list(dir, &error);
+    if (!names) return [NSString stringWithFormat:@"cannot list (%@)", error ?: @"?"];
+    names = [names sortedArrayUsingSelector:@selector(compare:)];
+    NSArray *shown = names.count > max ? [names subarrayWithRange:NSMakeRange(0, max)] : names;
+    return [NSString stringWithFormat:@"%lu: %@%@", (unsigned long)names.count, [shown componentsJoinedByString:@" | "],
+            names.count > max ? @" | …" : @""];
+}
+
+// Printable ASCII runs (>= 6 chars) in a byte window, for context around a hit.
+static NSString *wq_dbg_strings(const uint8_t *start, const uint8_t *end)
+{
+    NSMutableArray *runs = [NSMutableArray new];
+    const uint8_t *run = NULL;
+    for (const uint8_t *p = start; p <= end; p++) {
+        BOOL printable = p < end && *p >= 0x20 && *p < 0x7f;
+        if (printable && !run) run = p;
+        if (!printable && run) {
+            if (p - run >= 6) [runs addObject:[[NSString alloc] initWithBytes:run length:(NSUInteger)(p - run) encoding:NSASCIIStringEncoding] ?: @"?"];
+            run = NULL;
+        }
+    }
+    return [runs componentsJoinedByString:@" ‖ "];
+}
+
+// App Group ids named in the LaunchServices database (entitlements).
+static NSArray<NSString *> *wq_dbg_group_ids(NSData *data)
+{
+    NSMutableSet<NSString *> *ids = [NSMutableSet new];
+    static const char needle[] = "group.";
+    const uint8_t *bytes = data.bytes, *cursor = bytes, *end = bytes + data.length;
+    while (cursor < end) {
+        const uint8_t *hit = memmem(cursor, (size_t)(end - cursor), needle, sizeof(needle) - 1);
+        if (!hit) break;
+        cursor = hit + 1;
+        if (hit > bytes) {
+            uint8_t before = hit[-1];
+            if (isalnum(before) || before == '.' || before == '-' || before == '_') continue;   // "systemgroup." etc.
+        }
+        const uint8_t *p = hit;
+        while (p < end && (isalnum(*p) || *p == '.' || *p == '-' || *p == '_')) p++;
+        NSUInteger length = (NSUInteger)(p - hit);
+        if (length < 9 || length > 200) continue;
+        NSString *ident = [[NSString alloc] initWithBytes:hit length:length encoding:NSASCIIStringEncoding];
+        if ([ident hasSuffix:@"."]) continue;
+        if (ident) [ids addObject:ident];
+    }
+    return [ids.allObjects sortedArrayUsingSelector:@selector(compare:)];
+}
+
+typedef struct { NSString *path; NSString *ident; NSString *note; } WQDbgQuery;
+
+// worse_query's own call shape (class 7 + group identifier), asked for any
+// group id: does the container manager answer with that group's folder?
+static WQDbgQuery wq_dbg_query_group(NSString *group, int variant)
+{
+    WQDbgQuery r = { nil, nil, nil };
+    void *mgr = dlopen("/usr/lib/system/libsystem_containermanager.dylib", RTLD_NOW | RTLD_LOCAL);
+    if (!mgr) { r.note = @"no container manager"; return r; }
+    cq_create_fn create = (cq_create_fn)dlsym(mgr, "container_query_create");
+    cq_set_u64_fn setClass = (cq_set_u64_fn)dlsym(mgr, "container_query_set_class");
+    cq_set_ids_fn setGroups = (cq_set_ids_fn)dlsym(mgr, "container_query_set_group_identifiers");
+    cq_set_u64_fn setFlags = (cq_set_u64_fn)dlsym(mgr, "container_query_operation_set_flags");
+    cq_set_u64_fn setPart = (cq_set_u64_fn)dlsym(mgr, "container_query_operation_set_part");
+    cq_result_fn single = (cq_result_fn)dlsym(mgr, "container_query_get_single_result");
+    cq_free_fn freeQuery = (cq_free_fn)dlsym(mgr, "container_query_free");
+    co_get_path_fn getPath = (co_get_path_fn)dlsym(mgr, "container_object_get_path");
+    co_get_id_fn getIdentifier = (co_get_id_fn)dlsym(mgr, "container_object_get_identifier");
+    if (!create || !setClass || !setGroups || !single || !freeQuery || !getPath) { r.note = @"symbols missing"; return r; }
+    void *query = create();
+    if (!query) { r.note = @"no query"; return r; }
+    @try {
+        setClass(query, 7);
+        setGroups(query, xpc_string_create(group.UTF8String));
+        if (variant >= 1 && setPart) setPart(query, 3);
+        if (variant == 1 && setFlags) setFlags(query, 0x0000008000000000ULL);
+        if (variant == 2 && setFlags) setFlags(query, 0x0000000800000000ULL);
+        void *result = single(query);
+        if (!result) r.note = @"no result";
+        else {
+            const char *path = getPath(result);
+            const char *ident = getIdentifier ? getIdentifier(result) : NULL;
+            r.path = path ? @(path) : nil;
+            r.ident = ident ? @(ident) : nil;
+            if (!r.path) r.note = @"result without path";
+        }
+    } @catch (NSException *exception) {
+        r.note = [@"exception: " stringByAppendingString:exception.reason ?: @"?"];
+    } @finally {
+        freeQuery(query);
+    }
+    return r;
+}
+
+NSString *wq_debug_group_label_report(void)
+{
+    NSMutableString *out = [NSMutableString new];
+    void (^line)(NSString *, ...) = ^(NSString *format, ...) {
+        va_list args;
+        va_start(args, format);
+        [out appendString:[[NSString alloc] initWithFormat:format arguments:args]];
+        [out appendString:@"\n"];
+        va_end(args);
+    };
+    NSOperatingSystemVersion os = NSProcessInfo.processInfo.operatingSystemVersion;
+    NSDictionary *info = NSBundle.mainBundle.infoDictionary;
+    line(@"WQ Files group label report · %@ (%@) · iOS %ld.%ld.%ld · %@", info[@"CFBundleShortVersionString"], info[@"CFBundleVersion"],
+         (long)os.majorVersion, (long)os.minorVersion, (long)os.patchVersion, NSDate.date);
+
+    // 1. Which group folders exist (LaunchServices database + current labels).
+    NSArray<NSString *> *all = wq_ls_container_paths(nil) ?: @[];
+    NSMutableArray<NSString *> *groups = [NSMutableArray new];
+    for (NSString *path in all) if ([path containsString:@"/Containers/Shared/AppGroup/"]) [groups addObject:path];
+    [groups sortUsingSelector:@selector(compare:)];
+    NSUInteger labelled = 0;
+    for (NSString *g in groups) if (wq_container_label(g).length) labelled++;
+    line(@"\n== 1. Group folders: %lu from the LaunchServices database, %lu labelled now (of %lu containers)",
+         (unsigned long)groups.count, (unsigned long)labelled, (unsigned long)all.count);
+    NSSet<NSString *> *groupSet = [NSSet setWithArray:[groups valueForKey:@"uppercaseString"]];
+
+    // 2. The database itself: group ids and what surrounds group paths.
+    NSString *store = wq_ls_store_path();
+    line(@"\n== 2. LaunchServices database: %@ (%@)", store ?: @"not found", store ? wq_dbg_stat(store) : @"-");
+    NSData *data = nil;
+    if (store) {
+        wq_grant(store.stringByDeletingLastPathComponent);
+        NSString *error = nil;
+        data = wq_read(store, 512u * 1024 * 1024, &error);
+        if (!data) line(@"read failed: %@", error ?: @"?");
+    }
+    NSArray<NSString *> *groupIDs = data ? wq_dbg_group_ids(data) : @[];
+    line(@"%lu bytes; %lu distinct group ids", (unsigned long)data.length, (unsigned long)groupIDs.count);
+    if (groupIDs.count) line(@"first ids: %@", [[groupIDs subarrayWithRange:NSMakeRange(0, MIN((NSUInteger)25, groupIDs.count))] componentsJoinedByString:@", "]);
+    if (data.length) {
+        static const char needle[] = "/mobile/Containers/Shared/AppGroup/";
+        const uint8_t *bytes = data.bytes, *cursor = bytes, *end = bytes + data.length;
+        NSUInteger hits = 0, shown = 0;
+        while (cursor < end) {
+            const uint8_t *hit = memmem(cursor, (size_t)(end - cursor), needle, sizeof(needle) - 1);
+            if (!hit) break;
+            cursor = hit + sizeof(needle) - 1;
+            hits++;
+            if (shown >= 6) continue;
+            shown++;
+            const uint8_t *from = hit - MIN((size_t)(hit - bytes), (size_t)400);
+            const uint8_t *to = MIN(end, hit + 300);
+            line(@"-- context %lu at offset %lu: %@", (unsigned long)shown, (unsigned long)(hit - bytes), wq_dbg_strings(from, to));
+        }
+        line(@"group path occurrences: %lu", (unsigned long)hits);
+    }
+
+    // 3. Container manager asked by group id (worse_query's call shape).
+    line(@"\n== 3. Container manager by group id (class 7)");
+    NSMutableArray<NSString *> *probe = [NSMutableArray new];
+    NSString *own = wq_app_group();
+    if (own) [probe addObject:own];
+    for (NSString *ident in groupIDs) if (![ident isEqualToString:own]) [probe addObject:ident];
+    NSUInteger tried = 0, answered[3] = {0, 0, 0}, matched = 0, shownLines = 0;
+    NSMutableDictionary<NSString *, NSNumber *> *notes = [NSMutableDictionary new];
+    for (NSString *ident in probe) {
+        if (tried >= 400) break;
+        tried++;
+        NSMutableArray *parts = [NSMutableArray new];
+        BOOL any = NO;
+        for (int variant = 0; variant < 3; variant++) {
+            WQDbgQuery r = wq_dbg_query_group(ident, variant);
+            if (r.path) {
+                answered[variant]++;
+                any = YES;
+                BOOL known = [groupSet containsObject:WQCanonicalVarPath(r.path).uppercaseString];
+                [parts addObject:[NSString stringWithFormat:@"v%d %@%@%@", variant, r.path, r.ident ? [@" id " stringByAppendingString:r.ident] : @"",
+                                  known ? @" [in list]" : @""]];
+            } else {
+                NSString *note = r.note ?: @"?";
+                notes[note] = @(notes[note].unsignedIntegerValue + 1);
+                [parts addObject:[NSString stringWithFormat:@"v%d %@", variant, note]];
+            }
+        }
+        if (any) {
+            WQDbgQuery r = wq_dbg_query_group(ident, 0);
+            if (r.path && [groupSet containsObject:WQCanonicalVarPath(r.path).uppercaseString]) matched++;
+        }
+        if (shownLines < 40 || [ident isEqualToString:own]) {
+            shownLines++;
+            line(@"%@: %@", ident, [parts componentsJoinedByString:@"; "]);
+        }
+    }
+    line(@"tried %lu ids; answered v0 %lu, v1 %lu, v2 %lu; v0 paths that are listed group folders: %lu; failures: %@",
+         (unsigned long)tried, (unsigned long)answered[0], (unsigned long)answered[1], (unsigned long)answered[2], (unsigned long)matched, notes);
+
+    // 4. LaunchServices proxies: groupContainerURLs per app.
+    line(@"\n== 4. LSApplicationProxy groupContainerURLs");
+    Class proxyClass = NSClassFromString(@"LSApplicationProxy");
+    SEL forIdentifier = NSSelectorFromString(@"applicationProxyForIdentifier:");
+    SEL groupURLs = NSSelectorFromString(@"groupContainerURLs");
+    NSArray<NSString *> *bundles = wq_ls_known_bundle_ids();
+    NSUInteger proxyShown = 0, withGroups = 0;
+    if ([proxyClass respondsToSelector:forIdentifier]) {
+        id (*send1)(id, SEL, id) = (id (*)(id, SEL, id))objc_msgSend;
+        id (*send0)(id, SEL) = (id (*)(id, SEL))objc_msgSend;
+        for (NSString *bid in bundles) {
+            if (proxyShown >= 25) break;
+            if ([bid hasPrefix:@"com.apple."] && proxyShown >= 5) continue;
+            proxyShown++;
+            @try {
+                id proxy = send1(proxyClass, forIdentifier, bid);
+                id urls = [proxy respondsToSelector:groupURLs] ? send0(proxy, groupURLs) : nil;
+                if ([urls isKindOfClass:NSDictionary.class] && [urls count]) withGroups++;
+                line(@"%@: %@", bid, [urls isKindOfClass:NSDictionary.class] ? [urls description] : (urls ? [urls description] : @"nil"));
+            } @catch (NSException *exception) {
+                line(@"%@: exception %@", bid, exception.reason);
+            }
+        }
+    } else {
+        line(@"LSApplicationProxy unavailable");
+    }
+    line(@"%lu of %lu apps returned group folders", (unsigned long)withGroups, (unsigned long)proxyShown);
+
+    // 5. Each group folder in detail (first 30).
+    line(@"\n== 5. Group folders in detail");
+    NSUInteger n = 0;
+    for (NSString *g in groups) {
+        if (n++ >= 30) break;
+        NSString *before = wq_dbg_xattr(g);
+        BOOL granted = wq_grant(g);
+        line(@"-- %@", g.lastPathComponent);
+        line(@"   label now: %@ · grant %@ · stat %@", wq_container_label(g) ?: @"(none)", granted ? @"yes" : @"no", wq_dbg_stat(g));
+        line(@"   xattr id before grant: %@ · after: %@ · xattr names: %@", before, wq_dbg_xattr(g), wq_dbg_xattr_names(g));
+        NSString *meta = [g stringByAppendingPathComponent:@".com.apple.mobile_container_manager.metadata.plist"];
+        int fd = open(meta.fileSystemRepresentation, O_RDONLY);
+        NSString *metaOpen = fd >= 0 ? @"opens" : wq_dbg_errno(errno);
+        if (fd >= 0) close(fd);
+        line(@"   metadata plist: %@ · %@", wq_dbg_stat(meta), metaOpen);
+        line(@"   top: %@", wq_dbg_listing(g, 12));
+        line(@"   Library/Preferences: %@", wq_dbg_listing([g stringByAppendingPathComponent:@"Library/Preferences"], 8));
+    }
+    return out;
+}
+#endif
