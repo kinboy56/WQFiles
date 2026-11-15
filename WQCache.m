@@ -447,8 +447,7 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
     if (!_scanning) [self.refreshControl endRefreshing];
     [self.tableView reloadData];
     [self updateButtons];
-    self.navigationController.tabBarItem.badgeColor = UIColor.systemGrayColor;  // busy, not a warning
-    self.navigationController.tabBarItem.badgeValue = _scanTask.running ? @"…" : nil;
+    if (self.navigationController) wq_set_tab_busy(self.navigationController, WQLocalizedNullable(@"Clean"), _scanTask.running);
 }
 
 - (void)toggleScan

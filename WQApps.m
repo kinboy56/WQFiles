@@ -616,8 +616,7 @@ static BOOL wq_dir_size_cancellable(NSString *dir, NSString *taskID, WQScanCance
             style:UIBarButtonItemStylePlain target:self action:@selector(toggleScan)] atIndex:0];
     }
     self.navigationItem.rightBarButtonItems = buttons;
-    self.navigationController.tabBarItem.badgeColor = UIColor.systemGrayColor;  // busy, not a warning
-    self.navigationController.tabBarItem.badgeValue = _scanTask.running ? @"…" : nil;
+    if (self.navigationController) wq_set_tab_busy(self.navigationController, WQLocalizedNullable(@"Apps"), _scanTask.running);
     if (resultChanged && !_scanning && (self.view.window || _restoreBundleID)) [self refreshBackups];
 }
 
