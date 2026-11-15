@@ -1084,6 +1084,9 @@ static void WQAppScanWatch(WQScanCancellation *cancellation, NSUInteger lastSeri
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
 {
+    // The progress header draws the status itself; a title here would be drawn
+    // into it a second time (overlapping text).
+    if (_status && _fraction >= 0) return nil;
     if (_status) return _status;
     unsigned long long total = 0;
     for (WQAppItem *a in _apps) total += a.bytes;
