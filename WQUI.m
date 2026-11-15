@@ -551,7 +551,8 @@ void wq_set_prism_enabled(BOOL enabled)
 
 // iPad: busy tab items with their plain titles; one timer animates them all
 // and stops when none is busy.
-static NSMapTable<UITabBarItem *, NSString *> *gBusyTabs;
+static NSMapTable<UITabBarItem *, NSString *> *gBusyTabs;   // running → spinner
+static NSHashTable<UITabBarItem *> *gWaitingTabs;              // queued → clock
 static NSTimer *gBusyTabTimer;
 
 static void wq_busy_tabs_tick(void)
@@ -561,24 +562,42 @@ static void wq_busy_tabs_tick(void)
     if (!frames) frames = @[@"⠋", @"⠙", @"⠹", @"⠸", @"⠼", @"⠴", @"⠦", @"⠧", @"⠇", @"⠏"];
     frame = (frame + 1) % frames.count;
     for (UITabBarItem *item in gBusyTabs)
-        item.title = [NSString stringWithFormat:@"%@ %@", [gBusyTabs objectForKey:item], frames[frame]];
+        if (![gWaitingTabs containsObject:item]) item.title = [NSString stringWithFormat:@"%@ %@", [gBusyTabs objectForKey:item], frames[frame]];
 }
 
-void wq_set_tab_busy(UIViewController *tabRoot, NSString *title, BOOL busy)
+BOOL wq_scan_task_waiting(WQScanTask *task)
+{
+    // A started task publishes progress once its worker runs; until then it waits
+    // behind another scan on the shared queue (or is paused).
+    return task.running && (task.paused || !task.status.length
+        || [task.status isEqualToString:@"Scan queued; previous results kept"]
+        || [task.status isEqualToString:WQLocalized(@"Scan queued; previous results kept")]);
+}
+
+void wq_set_tab_busy(UIViewController *tabRoot, NSString *title, WQTabBusy state)
 {
     UITabBarItem *item = tabRoot.tabBarItem;
     if (UIDevice.currentDevice.userInterfaceIdiom != UIUserInterfaceIdiomPad) {
         item.badgeColor = UIColor.systemGrayColor;  // busy, not a warning
-        item.badgeValue = busy ? @"…" : nil;
+        item.badgeValue = state == WQTabBusyRunning ? @"…" : state == WQTabBusyWaiting ? @"◷" : nil;
         return;
     }
     item.badgeValue = nil;
-    if (!gBusyTabs) gBusyTabs = [NSMapTable weakToStrongObjectsMapTable];
-    if (busy) {
+    if (!gBusyTabs) {
+        gBusyTabs = [NSMapTable weakToStrongObjectsMapTable];
+        gWaitingTabs = [NSHashTable weakObjectsHashTable];
+    }
+    if (state == WQTabBusyWaiting) {
+        [gBusyTabs removeObjectForKey:item];
+        [gWaitingTabs addObject:item];
+        item.title = [title stringByAppendingString:@" ◷"];
+    } else if (state == WQTabBusyRunning) {
         BOOL known = [gBusyTabs objectForKey:item] != nil;
+        [gWaitingTabs removeObject:item];
         [gBusyTabs setObject:title forKey:item];
         if (!known) wq_busy_tabs_tick();
     } else {
+        [gWaitingTabs removeObject:item];
         [gBusyTabs removeObjectForKey:item];
         item.title = title;
     }

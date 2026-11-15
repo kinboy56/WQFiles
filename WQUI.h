@@ -62,9 +62,12 @@ void wq_scan_lifecycle_install(BOOL (*_Nullable keepRunning)(void));
 void wq_scan_pause_for_background(void);
 dispatch_queue_t wq_scan_queue(void);
 void wq_scan_read(void (^work)(void));
-// Marks a tab as busy while its scan runs: a gray "…" badge on iPhone; on iPad
-// the floating tab bar always draws badges red, so the title gets an animated
-// braille spinner (⠋⠙⠹…) instead.
-void wq_set_tab_busy(UIViewController *tabRoot, NSString *title, BOOL busy);
+// Marks a tab while its scan runs or waits for another scan: a gray "…" or "◷"
+// badge on iPhone; on iPad the floating tab bar always draws badges red, so the
+// title gets an animated braille spinner (⠋⠙⠹…) or a clock (◷) instead.
+typedef NS_ENUM(NSInteger, WQTabBusy) { WQTabBusyNone, WQTabBusyRunning, WQTabBusyWaiting };
+@class WQScanTask;
+BOOL wq_scan_task_waiting(WQScanTask *task);
+void wq_set_tab_busy(UIViewController *tabRoot, NSString *title, WQTabBusy state);
 
 NS_ASSUME_NONNULL_END
