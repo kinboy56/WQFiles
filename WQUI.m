@@ -549,14 +549,44 @@ void wq_set_prism_enabled(BOOL enabled)
     [NSUserDefaults.standardUserDefaults setBool:!enabled forKey:kWQClassicDesignPref];
 }
 
+// iPad: busy tab items with their plain titles; one timer animates them all
+// and stops when none is busy.
+static NSMapTable<UITabBarItem *, NSString *> *gBusyTabs;
+static NSTimer *gBusyTabTimer;
+
+static void wq_busy_tabs_tick(void)
+{
+    static NSArray<NSString *> *frames;
+    static NSUInteger frame;
+    if (!frames) frames = @[@"⠋", @"⠙", @"⠹", @"⠸", @"⠼", @"⠴", @"⠦", @"⠧", @"⠇", @"⠏"];
+    frame = (frame + 1) % frames.count;
+    for (UITabBarItem *item in gBusyTabs)
+        item.title = [NSString stringWithFormat:@"%@ %@", [gBusyTabs objectForKey:item], frames[frame]];
+}
+
 void wq_set_tab_busy(UIViewController *tabRoot, NSString *title, BOOL busy)
 {
     UITabBarItem *item = tabRoot.tabBarItem;
-    if (UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad) {
-        item.badgeValue = nil;
-        item.title = busy ? [title stringByAppendingString:@" ↻"] : title;
-    } else {
+    if (UIDevice.currentDevice.userInterfaceIdiom != UIUserInterfaceIdiomPad) {
         item.badgeColor = UIColor.systemGrayColor;  // busy, not a warning
         item.badgeValue = busy ? @"…" : nil;
+        return;
+    }
+    item.badgeValue = nil;
+    if (!gBusyTabs) gBusyTabs = [NSMapTable weakToStrongObjectsMapTable];
+    if (busy) {
+        BOOL known = [gBusyTabs objectForKey:item] != nil;
+        [gBusyTabs setObject:title forKey:item];
+        if (!known) wq_busy_tabs_tick();
+    } else {
+        [gBusyTabs removeObjectForKey:item];
+        item.title = title;
+    }
+    if (gBusyTabs.count && !gBusyTabTimer) {
+        gBusyTabTimer = [NSTimer timerWithTimeInterval:0.1 repeats:YES block:^(NSTimer * __unused t) { wq_busy_tabs_tick(); }];
+        [NSRunLoop.mainRunLoop addTimer:gBusyTabTimer forMode:NSRunLoopCommonModes];
+    } else if (!gBusyTabs.count && gBusyTabTimer) {
+        [gBusyTabTimer invalidate];
+        gBusyTabTimer = nil;
     }
 }
