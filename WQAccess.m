@@ -3409,6 +3409,11 @@ NSString *wq_container_label(NSString *dir)
             buf[len] = 0;
             return [NSString stringWithUTF8String:buf];
         }
+        // iOS 27.2+: the identity attribute ("identifier: <id>" among others).
+        char identity[2048];
+        ssize_t n = getxattr(dir.fileSystemRepresentation, "com.apple.containermanager.identity", identity, sizeof(identity), 0, 0);
+        NSString *fromIdentity = n > 0 ? WQIdentityAttributeIdentifier([NSData dataWithBytes:identity length:(NSUInteger)n]) : nil;
+        if (fromIdentity.length) return fromIdentity;
     }
     // Prefer the container-manager query over the metadata plist: it needs no
     // file permission and can also label containers whose plist is root-only.
@@ -3724,7 +3729,7 @@ NSString *wq_debug_group_label_report(void)
     // 5. The app-record mapping (issue #59) checked against the metadata
     // plists that can be read: every disagreement would be a wrong label.
     NSDictionary<NSString *, NSString *> *map = data ? wq_ls_group_ids_from_store(data) : @{};
-    NSUInteger agree = 0, disagree = 0, onlyMap = 0, onlyPlist = 0, neither = 0;
+    NSUInteger agree = 0, disagree = 0, onlyMap = 0, onlyPlist = 0, neither = 0, identityRead = 0, identityDisagree = 0;
     NSMutableArray<NSString *> *details = [NSMutableArray new];
     for (NSString *g in groups) {
         NSString *meta = [g stringByAppendingPathComponent:@".com.apple.mobile_container_manager.metadata.plist"];
@@ -3733,6 +3738,16 @@ NSString *wq_debug_group_label_report(void)
         NSString *fromPlist = [plist isKindOfClass:NSDictionary.class] && [plist[@"MCMMetadataIdentifier"] isKindOfClass:NSString.class]
             ? plist[@"MCMMetadataIdentifier"] : nil;
         NSString *fromMap = map[g];
+        wq_grant(g);
+        char identityValue[2048];
+        ssize_t identityLength = getxattr(g.fileSystemRepresentation, "com.apple.containermanager.identity", identityValue, sizeof(identityValue), 0, 0);
+        NSString *fromIdentity = identityLength > 0
+            ? WQIdentityAttributeIdentifier([NSData dataWithBytes:identityValue length:(NSUInteger)identityLength]) : nil;
+        if (fromIdentity) identityRead++;
+        if (fromIdentity && fromMap && ![fromIdentity isEqualToString:fromMap]) {
+            identityDisagree++;
+            [details addObject:[NSString stringWithFormat:@"DISAGREE %@: identity %@, records %@", g.lastPathComponent, fromIdentity, fromMap]];
+        }
         if (fromPlist && fromMap) {
             if ([fromPlist isEqualToString:fromMap]) agree++;
             else { disagree++; [details addObject:[NSString stringWithFormat:@"DISAGREE %@: plist %@, records %@", g.lastPathComponent, fromPlist, fromMap]]; }
@@ -3743,6 +3758,8 @@ NSString *wq_debug_group_label_report(void)
     line(@"\n== 5. App-record mapping: %lu folders mapped in the database", (unsigned long)map.count);
     line(@"of %lu group folders: agree with plist %lu, DISAGREE %lu, new (plist unreadable) %lu, plist only %lu, still unknown %lu",
          (unsigned long)groups.count, (unsigned long)agree, (unsigned long)disagree, (unsigned long)onlyMap, (unsigned long)onlyPlist, (unsigned long)neither);
+    line(@"identity attribute: read on %lu of %lu folders, DISAGREES with the records on %lu",
+         (unsigned long)identityRead, (unsigned long)groups.count, (unsigned long)identityDisagree);
     [details sortUsingSelector:@selector(compare:)];
     for (NSString *d in details) line(@"   %@", d);
 
