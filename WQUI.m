@@ -609,3 +609,44 @@ void wq_set_tab_busy(UIViewController *tabRoot, NSString *title, WQTabBusy state
         gBusyTabTimer = nil;
     }
 }
+
+@implementation WQProgressHeaderView {
+    UILabel *_label;
+    UIProgressView *_bar;
+}
+
+- (instancetype)initWithReuseIdentifier:(NSString *)reuseIdentifier
+{
+    if ((self = [super initWithReuseIdentifier:reuseIdentifier])) {
+        _label = [UILabel new];
+        _label.font = [UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
+        _label.adjustsFontForContentSizeCategory = YES;
+        _label.textColor = UIColor.secondaryLabelColor;
+        _label.numberOfLines = 0;
+        _bar = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+        UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[_label, _bar]];
+        stack.axis = UILayoutConstraintAxisVertical;
+        stack.spacing = 8;
+        stack.translatesAutoresizingMaskIntoConstraints = NO;
+        [self.contentView addSubview:stack];
+        UILayoutGuide *m = self.contentView.layoutMarginsGuide;
+        NSLayoutConstraint *bottom = [stack.bottomAnchor constraintEqualToAnchor:m.bottomAnchor];
+        bottom.priority = UILayoutPriorityDefaultHigh;
+        [NSLayoutConstraint activateConstraints:@[
+            [stack.leadingAnchor constraintEqualToAnchor:m.leadingAnchor],
+            [stack.trailingAnchor constraintEqualToAnchor:m.trailingAnchor],
+            [stack.topAnchor constraintEqualToAnchor:m.topAnchor],
+            bottom,
+        ]];
+    }
+    return self;
+}
+
+- (void)setText:(NSString *)text fraction:(float)fraction
+{
+    _label.text = text;
+    _bar.hidden = fraction < 0;
+    if (fraction >= 0) [_bar setProgress:MIN(1.0f, fraction) animated:NO];
+}
+
+@end

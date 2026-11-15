@@ -68,6 +68,10 @@ void wq_scan_read(void (^work)(void));
 typedef NS_ENUM(NSInteger, WQTabBusy) { WQTabBusyNone, WQTabBusyRunning, WQTabBusyWaiting };
 @class WQScanTask;
 BOOL wq_scan_task_waiting(WQScanTask *task);
+// Section header with the status text and, while fraction >= 0, a progress bar.
+@interface WQProgressHeaderView : UITableViewHeaderFooterView
+- (void)setText:(nullable NSString *)text fraction:(float)fraction;
+@end
 void wq_set_tab_busy(UIViewController *tabRoot, NSString *title, WQTabBusy state);
 
 NS_ASSUME_NONNULL_END

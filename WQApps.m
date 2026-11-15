@@ -52,6 +52,7 @@
     NSArray<WQAppItem *> *_visibleApps;
     NSString *_query;
     NSString *_status;
+    float _fraction;   // progress bar under the status; negative hides it
     BOOL _busy;
     WQScanCancellation *_scanCancellation;
     NSUInteger _scanGeneration;
@@ -599,6 +600,7 @@ static BOOL wq_dir_size_cancellable(NSString *dir, NSString *taskID, WQScanCance
         [self rebuildVisibleApps];
     }
     _scanning = _scanTask.running;
+    _fraction = _scanning && !_scanTask.paused ? _scanTask.fraction : -1;
     _status = _scanning ? (_scanTask.paused ? WQLocalized(@"Scan paused") :
         (_scanTask.status.length ? WQLocalized(_scanTask.status) : WQLocalized(@"Scan queued; previous results kept"))) :
         (_scanTask.status.length ? WQLocalized(_scanTask.status) : ([result[@"note"] isKindOfClass:NSString.class] ? result[@"note"] : nil));
@@ -634,6 +636,7 @@ static BOOL wq_dir_size_cancellable(NSString *dir, NSString *taskID, WQScanCance
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    _fraction = -1;
     self.title = WQLocalizedNullable(@"Apps");
     if (wq_prism_enabled()) {
         wq_prism_install_background(self);
@@ -713,6 +716,7 @@ static BOOL wq_dir_size_cancellable(NSString *dir, NSString *taskID, WQScanCance
 {
     _busy = busy;
     _status = status;
+    _fraction = -1;
     [self.tableView reloadData];
 }
 
@@ -782,7 +786,7 @@ static void WQAppScanWatch(WQScanCancellation *cancellation, NSUInteger lastSeri
                 dispatch_async(dispatch_get_main_queue(), ^{
                     if (generation != self->_scanGeneration || cancellation.isCancelled) return;
                     self->_status = WQLocalizedFormat(@"Finding apps… %lld%%", total ? (long long)(done * 100 / total) : 0);
-                    [self->_scanTask progress:self->_status generation:taskGeneration];
+                    [self->_scanTask progress:self->_status fraction:total ? (float)((double)done / (double)total) : 0 generation:taskGeneration];
                 [self.tableView reloadData];
                 });
             });
@@ -816,7 +820,7 @@ static void WQAppScanWatch(WQScanCancellation *cancellation, NSUInteger lastSeri
             dispatch_async(dispatch_get_main_queue(), ^{
                 if (generation != self->_scanGeneration || cancellation.isCancelled) return;
                 self->_status = WQLocalizedFormat(@"Measuring %lu/%lu…", (unsigned long)i, (unsigned long)containers.count);
-                [self->_scanTask progress:self->_status generation:taskGeneration];
+                [self->_scanTask progress:self->_status fraction:(float)((double)i / (double)containers.count) generation:taskGeneration];
                 [self.tableView reloadData];
             });
             NSString *shortName = c.lastPathComponent;
@@ -1067,6 +1071,15 @@ static void WQAppScanWatch(WQScanCancellation *cancellation, NSUInteger lastSeri
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
     return (_busy && !_apps.count) ? 1 : (NSInteger)self.visibleApps.count;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section
+{
+    if (!_status || _fraction < 0) return nil;   // plain title header
+    WQProgressHeaderView *header = [tableView dequeueReusableHeaderFooterViewWithIdentifier:@"progress"]
+        ?: [[WQProgressHeaderView alloc] initWithReuseIdentifier:@"progress"];
+    [header setText:_status fraction:_fraction];
+    return header;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section

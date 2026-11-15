@@ -1253,6 +1253,8 @@ static NSString *wq_info_date(struct timespec ts)
     UILabel *_pathLabel;
     UIView *_headerBox;
     NSString *_scanStatus;
+    float _scanFraction;          // progress bar under _scanStatus; negative hides it
+    UIProgressView *_scanBar;
     CGFloat _headerWidth;
     NSString *_error;
     BOOL _labels;
@@ -1488,6 +1490,18 @@ static NSString *wq_info_date(struct timespec ts)
     CGFloat side = 16, top = kWQDeviceStripHeight + 8;
     CGSize fit = [_pathLabel sizeThatFits:CGSizeMake(width - 2 * side, CGFLOAT_MAX)];
     CGFloat height = top + ceil(fit.height) + 10;
+    // Loading progress, easier to follow than the small counter text.
+    BOOL showBar = _scanStatus && _scanFraction >= 0;
+    if (showBar && !_scanBar) {
+        _scanBar = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+        [_headerBox addSubview:_scanBar];
+    }
+    _scanBar.hidden = !showBar;
+    if (showBar) {
+        [_scanBar setProgress:MIN(1.0f, _scanFraction) animated:NO];
+        _scanBar.frame = CGRectMake(side, height - 2, width - 2 * side, 4);
+        height += 12;
+    }
     CGFloat oldHeight = _headerBox.frame.size.height;
     _headerBox.frame = CGRectMake(0, 0, width, height);
     _pathLabel.frame = CGRectMake(side, top, width - 2 * side, ceil(fit.height));
@@ -1528,6 +1542,7 @@ static NSString *wq_info_date(struct timespec ts)
 {
     UIPasteboard.generalPasteboard.string = _path;
     _scanStatus = WQLocalized(@"Path copied");
+    _scanFraction = -1;
     [self updateHeader];
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         if ([self->_scanStatus isEqualToString:WQLocalized(@"Path copied")]) { self->_scanStatus = nil; [self updateHeader]; }
@@ -2214,6 +2229,7 @@ static NSString *wq_info_date(struct timespec ts)
             dispatch_async(dispatch_get_main_queue(), ^{
                 if (generation != self->_scanGeneration || cancellation.isCancelled) return;
                 self->_scanStatus = WQLocalized(@"Scanning inodes…");
+                self->_scanFraction = 0;
                 [self updateHeader];
             });
             CFAbsoluteTime scanStarted = CFAbsoluteTimeGetCurrent();
@@ -2229,6 +2245,7 @@ static NSString *wq_info_date(struct timespec ts)
                 dispatch_async(dispatch_get_main_queue(), ^{
                     if (generation != self->_scanGeneration || cancellation.isCancelled) return;
                     self->_scanStatus = WQLocalizedFormat(@"Scanning inodes… %lld%% · %lu found%@", total ? (long long)(done * 100 / total) : 0, (unsigned long)f, left);
+                    self->_scanFraction = total ? (float)((double)done / (double)total) : 0;
                     [self updateHeader];
                 });
             });
@@ -2263,6 +2280,7 @@ static NSString *wq_info_date(struct timespec ts)
                 dispatch_async(dispatch_get_main_queue(), ^{
                     if (generation != self->_scanGeneration || cancellation.isCancelled) return;
                     self->_scanStatus = WQLocalizedFormat(@"Reading containers… %lu of %lu", (unsigned long)shown, (unsigned long)entryCount);
+                    self->_scanFraction = entryCount ? (float)((double)shown / (double)entryCount) : 0;
                     [self updateHeader];
                 });
             }

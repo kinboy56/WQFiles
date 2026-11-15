@@ -36,6 +36,7 @@ static BOOL gTasksPaused;
     task->_interrupted = [saved[@"unfinished"] isEqual:@YES] && !task->_userPaused;
     task->_status = [saved[@"status"] isKindOfClass:NSString.class] ? saved[@"status"] : @"";
     task->_paused = gTasksPaused;
+    task->_fraction = -1;
     gTasks[name] = task;
     return task;
 }
@@ -71,6 +72,7 @@ static BOOL gTasksPaused;
     _interrupted = NO;
     _userPaused = NO;
     _status = @"";
+    _fraction = -1;
     [self save];
     [self notify];
     return _generation;
@@ -86,14 +88,20 @@ static BOOL gTasksPaused;
     _interrupted = NO;
     _userPaused = YES;
     _status = @"Scan paused";
+    _fraction = -1;
     [self save];
     [self notify];
 }
 - (void)progress:(NSString *)status generation:(NSUInteger)generation
 {
+    [self progress:status fraction:-1 generation:generation];
+}
+- (void)progress:(NSString *)status fraction:(float)fraction generation:(NSUInteger)generation
+{
     NSAssert(NSThread.isMainThread, @"task state belongs to the main thread");
     if (generation != _generation || !_running) return;
     _status = [status copy];
+    _fraction = fraction;
     [self notify];
 }
 - (void)finish:(NSDictionary *)result generation:(NSUInteger)generation
