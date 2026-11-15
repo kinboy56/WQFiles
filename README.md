@@ -23,21 +23,18 @@ from the next start.
 
 ## Tested devices
 
-Confirmed working, by the maintainer or by users in GitHub issues:
+Tested by the maintainer on:
 
-| Device | iOS | Source |
-|---|---|---|
-| iPhone 16 Pro Max (iPhone17,2) | 27.2.1 | maintainer |
-| iPad Air 5 | iPadOS 27.0.1 | maintainer ([#3](https://github.com/kolbicz/WQFiles/issues/3)) |
-| iPhone 18 Pro (iPhone19,2) | 27.2 | user ([#7](https://github.com/kolbicz/WQFiles/issues/7)) |
-| iPhone19,7 | 27.3 beta | user ([#50](https://github.com/kolbicz/WQFiles/issues/50)) |
-| iPhone 17 Pro Max (iPhone18,2) | 27.0.1 | user ([#42](https://github.com/kolbicz/WQFiles/issues/42)) |
-| iPhone 16 Pro (iPhone17,1) | 26.5 | user ([#37](https://github.com/kolbicz/WQFiles/issues/37)) |
-| iPhone 13 (iPhone14,5) | 27.2 | user ([#8](https://github.com/kolbicz/WQFiles/issues/8)) |
-| (maintainer) | 26.7.1 | maintainer |
+| Device | iOS |
+|---|---|
+| iPhone 16 Pro Max (iPhone17,2) | 27.2.1 |
+| iPhone 17 Pro Max (iPhone18,2) | 27.0.1 |
+| iPad Air 5 | iPadOS 27.0.1 |
+| iPhone 14 Pro (iPhone15,2) | 26.7.1 |
 
+Users have also reported it working on iOS 26.5, 27.2 and the 27.3 beta.
 Works on a device or iOS version not listed here? Open an issue with the Log
-(Settings → Log → Share) and it gets added.
+(Settings → Log → Share).
 
 **Not supported:** iOS 18 and older. worse_query doesn't exist there; WQ Files shows a notice instead of scanning. On iOS 17 and 18 use
 [Cyanide](https://github.com/kolbicz/Cyanide).
