@@ -599,21 +599,29 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
                                                              target:self action:@selector(confirmClean)];
     clean.enabled = n > 0 && !_cleanRequiresRescan;
     NSArray *visible = self.visibleItems;
-    BOOL allVisible = visible.count > 0;
-    for (WQCacheItem *it in visible) if (it.limited || !it.selected) { allVisible = NO; break; }
+    BOOL hasEligible = NO, allVisible = YES;
+    for (WQCacheItem *it in visible) {
+        if (it.limited) continue;
+        hasEligible = YES;
+        if (!it.selected) allVisible = NO;
+    }
     __weak typeof(self) weakSelf = self;
     UIAction *__unused all = [UIAction actionWithTitle:WQLocalizedNullable(@"Select All") image:[UIImage systemImageNamed:@"checkmark.circle"]
                                    identifier:nil handler:^(UIAction *__unused a) { [weakSelf selectWhere:^BOOL(WQCacheItem *__unused it) { return YES; }]; }];
     UIAction *none = [UIAction actionWithTitle:WQLocalizedNullable(@"Select None") image:[UIImage systemImageNamed:@"circle"]
-                                    identifier:nil handler:^(UIAction *__unused a) { [weakSelf selectWhere:^BOOL(WQCacheItem *__unused it) { return NO; }]; }];
+                                    identifier:nil handler:^(UIAction *__unused a) { [weakSelf clearSelection]; }];
+    UIAction *invert = [UIAction actionWithTitle:WQLocalizedNullable(@"Invert Selection") image:[UIImage systemImageNamed:@"circle.lefthalf.filled"]
+                                    identifier:nil handler:^(UIAction *__unused a) { [weakSelf selectWhere:^BOOL(WQCacheItem *it) { return !it.selected; }]; }];
+    if (!hasEligible) invert.attributes = all.attributes = UIMenuElementAttributesDisabled;
+    if (!n) none.attributes = UIMenuElementAttributesDisabled;
     UIAction *large = [UIAction actionWithTitle:WQLocalizedNullable(@"Select Large Caches (50 MB+)") image:[UIImage systemImageNamed:@"arrow.up.circle"]
                                      identifier:nil handler:^(UIAction *__unused a) {
         [weakSelf selectWhere:^BOOL(WQCacheItem *__unused it) { return it.bytes >= 50ull * 1000 * 1000; }];
     }];
-    all.state = allVisible ? UIMenuElementStateOn : UIMenuElementStateOff;
+    all.state = hasEligible && allVisible ? UIMenuElementStateOn : UIMenuElementStateOff;
     UIBarButtonItem *select = [[UIBarButtonItem alloc] initWithTitle:WQLocalizedNullable(@"Select")
-                                                                menu:[UIMenu menuWithChildren:@[all, none, large]]];
-    select.enabled = visible.count > 0;
+                                                                menu:[UIMenu menuWithChildren:@[all, invert, none, large]]];
+    select.enabled = visible.count > 0 || n > 0;
     self.navigationItem.rightBarButtonItems = @[clean, select];
 }
 
@@ -1039,6 +1047,13 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
 - (void)selectWhere:(BOOL (^)(WQCacheItem *item))rule
 {
     for (WQCacheItem *it in self.visibleItems) it.selected = !it.limited && rule(it);
+    [self.tableView reloadData];
+    [self updateButtons];
+}
+
+- (void)clearSelection
+{
+    for (WQCacheItem *item in _items) item.selected = NO;
     [self.tableView reloadData];
     [self updateButtons];
 }
