@@ -4139,6 +4139,48 @@ static UIMenu *wq_recent_menu(NSDictionary *entry)
 
 @end
 
+// Clock button for the start screens: a dropdown with the recent folders and
+// files (rebuilt each time it opens), Show All and Clear Recent. Keeps the
+// start screen's height fixed however long the list gets.
+static UIBarButtonItem *wq_recent_bar_button(UIViewController *host)
+{
+    __weak UIViewController *weakHost = host;
+    UIDeferredMenuElement *items = [UIDeferredMenuElement elementWithUncachedProvider:^(void (^completion)(NSArray<UIMenuElement *> *)) {
+        NSArray<NSDictionary *> *recents = wq_recents();
+        if (!recents.count) {
+            UIAction *none = [UIAction actionWithTitle:WQLocalized(@"Folders and files you open show up here.") image:nil identifier:nil
+                                               handler:^(UIAction *__unused a) {}];
+            none.attributes = UIMenuElementAttributesDisabled;
+            completion(@[none]);
+            return;
+        }
+        NSMutableArray<UIMenuElement *> *list = [NSMutableArray new];
+        for (NSDictionary *entry in recents) {
+            BOOL directory = [entry[@"dir"] boolValue];
+            UIAction *open = [UIAction actionWithTitle:WQVerbatim(entry[@"title"]) image:[UIImage systemImageNamed:directory ? @"folder" : @"doc"]
+                                            identifier:nil handler:^(UIAction *__unused a) {
+                UIViewController *current = weakHost;
+                if (current) wq_open_recent(current, entry);
+            }];
+            open.subtitle = WQVerbatim(wq_recent_subtitle(entry));
+            [list addObject:open];
+        }
+        UIAction *all = [UIAction actionWithTitle:WQLocalized(@"Show All") image:[UIImage systemImageNamed:@"list.bullet"] identifier:nil
+                                          handler:^(UIAction *__unused a) {
+            [weakHost.navigationController pushViewController:[WQRecentsViewController new] animated:YES];
+        }];
+        UIAction *clear = [UIAction actionWithTitle:WQLocalized(@"Clear Recent") image:[UIImage systemImageNamed:@"clock.badge.xmark"] identifier:nil
+                                            handler:^(UIAction *__unused a) { wq_save_recents(@[]); }];
+        clear.attributes = UIMenuElementAttributesDestructive;
+        [list addObject:[UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[all, clear]]];
+        completion(list);
+    }];
+    UIBarButtonItem *button = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"clock.arrow.circlepath"]
+                                                                menu:[UIMenu menuWithTitle:WQLocalized(@"Recent") children:@[items]]];
+    button.accessibilityLabel = WQLocalized(@"Recent");
+    return button;
+}
+
 @interface WQFavoritesViewController : UITableViewController
 @end
 
@@ -4542,8 +4584,6 @@ static void wq_apply_design(void);
     UIStackView *_contentStack;
     UIStackView *_containersStack;
     UIStackView *_favoritesStack;
-    UIStackView *_recentRows;
-    UIView *_recentSection;
     UIStackView *_systemRows;
     UIView *_systemSection;
     UIView *_heroView;
@@ -4580,13 +4620,12 @@ static void wq_apply_design(void);
                                                            target:self
                                                            action:@selector(openSettings)];
     gear.accessibilityLabel = WQLocalizedNullable(@"Settings");
-    self.navigationItem.rightBarButtonItem = gear;
+    self.navigationItem.rightBarButtonItems = @[gear, wq_recent_bar_button(self)];
 
     [self buildInterface];
     [self rebuildLocations];
     [self rebuildContainers];
     [self rebuildFavorites];
-    [self rebuildRecents];
     [self rebuildSystem];
     [self updateHealthUI];
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(recentsChanged)
@@ -4685,7 +4724,6 @@ static void wq_apply_design(void);
     [_contentStack setCustomSpacing:16 afterView:favoritesHeader];
     [_contentStack addArrangedSubview:[self buildFavoritesRail]];
 
-    [self buildRecentSection];
     [self buildSystemSection];
     [_contentStack addArrangedSubview:[self buildFooter]];
 
@@ -4839,101 +4877,7 @@ static void wq_apply_design(void);
 
 - (void)recentsChanged
 {
-    [self rebuildRecents];
     [self rebuildFavorites];   // "Add to Favorites" from a Recent menu
-}
-
-- (void)buildRecentSection
-{
-    UIStackView *stack = [[UIStackView alloc] initWithFrame:CGRectZero];
-    stack.axis = UILayoutConstraintAxisVertical;
-    stack.spacing = 10;
-    [stack addArrangedSubview:WQPrismSectionHeaderView(WQLocalizedNullable(@"Recent"), nil)];
-    WQPrismGlassView *glass = [[WQPrismGlassView alloc] initWithRadius:22];
-    UIStackView *rows = [[UIStackView alloc] initWithFrame:CGRectZero];
-    rows.translatesAutoresizingMaskIntoConstraints = NO;
-    rows.axis = UILayoutConstraintAxisVertical;
-    [glass.contentView addSubview:rows];
-    [NSLayoutConstraint activateConstraints:@[
-        [rows.topAnchor constraintEqualToAnchor:glass.contentView.topAnchor constant:4],
-        [rows.bottomAnchor constraintEqualToAnchor:glass.contentView.bottomAnchor constant:-4],
-        [rows.leadingAnchor constraintEqualToAnchor:glass.contentView.leadingAnchor constant:10],
-        [rows.trailingAnchor constraintEqualToAnchor:glass.contentView.trailingAnchor constant:-10],
-    ]];
-    _recentRows = rows;
-    _recentSection = stack;
-    [stack addArrangedSubview:glass];
-    [_contentStack addArrangedSubview:stack];
-    [_contentStack setCustomSpacing:16 afterView:stack];
-}
-
-// Five newest on the home screen; "Show All" opens the full list.
-- (void)rebuildRecents
-{
-    for (UIView *view in _recentRows.arrangedSubviews) {
-        [_recentRows removeArrangedSubview:view];
-        [view removeFromSuperview];
-    }
-    NSArray<NSDictionary *> *recents = wq_recents();
-    _recentSection.hidden = recents.count == 0;
-    __weak typeof(self) weakSelf = self;
-    for (NSUInteger i = 0; i < MIN(recents.count, (NSUInteger)5); i++) {
-        NSDictionary *entry = recents[i];
-        BOOL directory = [entry[@"dir"] boolValue];
-        UIButton *row = [self listRowWithTitle:WQVerbatim(entry[@"title"]) subtitle:WQVerbatim(wq_recent_subtitle(entry))
-                                        symbol:directory ? @"folder.fill" : @"doc.fill" tone:directory ? @"sky" : @"indigo"];
-        [row addAction:[UIAction actionWithHandler:^(UIAction *__unused a) { wq_open_recent(weakSelf, entry); }]
-      forControlEvents:UIControlEventTouchUpInside];
-        row.menu = wq_recent_menu(entry);   // long-press
-        [_recentRows addArrangedSubview:row];
-    }
-    if (recents.count > 5) {
-        UIButton *all = [self listRowWithTitle:WQLocalized(@"Show All") subtitle:WQLocalizedFormat(@"%lu items", (unsigned long)recents.count)
-                                        symbol:@"clock.arrow.circlepath" tone:@"gray"];
-        [all addAction:[UIAction actionWithHandler:^(UIAction *__unused a) {
-            [weakSelf.navigationController pushViewController:[WQRecentsViewController new] animated:YES];
-        }] forControlEvents:UIControlEventTouchUpInside];
-        [_recentRows addArrangedSubview:all];
-    }
-}
-
-// A row like the System rows, as a button so it can carry a long-press menu.
-- (UIButton *)listRowWithTitle:(NSString *)title subtitle:(NSString *)subtitle symbol:(NSString *)symbol tone:(NSString *)tone
-{
-    UIButton *row = [UIButton buttonWithType:UIButtonTypeCustom];
-    row.translatesAutoresizingMaskIntoConstraints = NO;
-    WQPrismIconTile *icon = [[WQPrismIconTile alloc] initWithSymbol:symbol tone:tone size:30];
-    UILabel *name = [UILabel new], *sub = [UILabel new];
-    UIImageView *chevron = [[UIImageView alloc] initWithImage:[[UIImage systemImageNamed:@"chevron.right"] imageFlippedForRightToLeftLayoutDirection]];
-    name.text = title;
-    name.font = [UIFont preferredFontForTextStyle:UIFontTextStyleSubheadline];
-    name.textColor = UIColor.labelColor;
-    sub.text = subtitle;
-    sub.font = [UIFont preferredFontForTextStyle:UIFontTextStyleCaption2];
-    sub.textColor = UIColor.secondaryLabelColor;
-    sub.lineBreakMode = NSLineBreakByTruncatingMiddle;
-    chevron.tintColor = UIColor.tertiaryLabelColor;
-    for (UIView *view in @[icon, name, sub, chevron]) {
-        view.translatesAutoresizingMaskIntoConstraints = NO;
-        view.userInteractionEnabled = NO;
-        [row addSubview:view];
-    }
-    [NSLayoutConstraint activateConstraints:@[
-        [row.heightAnchor constraintEqualToConstant:54],
-        [icon.leadingAnchor constraintEqualToAnchor:row.leadingAnchor],
-        [icon.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
-        [name.topAnchor constraintEqualToAnchor:row.topAnchor constant:7],
-        [name.leadingAnchor constraintEqualToAnchor:icon.trailingAnchor constant:9],
-        [name.trailingAnchor constraintEqualToAnchor:chevron.leadingAnchor constant:-8],
-        [sub.topAnchor constraintEqualToAnchor:name.bottomAnchor constant:1],
-        [sub.leadingAnchor constraintEqualToAnchor:name.leadingAnchor],
-        [sub.trailingAnchor constraintEqualToAnchor:name.trailingAnchor],
-        [chevron.trailingAnchor constraintEqualToAnchor:row.trailingAnchor constant:-6],
-        [chevron.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
-        [chevron.widthAnchor constraintEqualToConstant:11],
-        [chevron.heightAnchor constraintEqualToConstant:11],
-    ]];
-    return row;
 }
 
 - (void)buildSystemSection
@@ -5898,6 +5842,7 @@ static NSString *const kWQTroubleshootingFooter =
 {
     [super viewDidLoad];
     self.navigationController.navigationBar.prefersLargeTitles = YES;
+    self.navigationItem.leftBarButtonItem = wq_recent_bar_button(self);
     self.tableView.tableFooterView = [self authorFooter];
     dispatch_async(wq_io(), ^{
         NSString *recovery = wq_recover_interrupted_restore();
