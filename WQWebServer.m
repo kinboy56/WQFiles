@@ -548,7 +548,9 @@ static BOOL WQWebSend(int fd, const void *bytes, size_t length)
         if (published) finalName = candidate;
         else if (!permitted || publishError != EEXIST) break;
     }
-    if (!finalName && identity && [identity isEqualToDictionary:wq_item_identity(stage)]) {
+    // The stage name is our own random one; without an identity (it couldn't
+    // be read) it is still removed rather than left behind.
+    if (!finalName && (!identity || [identity isEqualToDictionary:wq_item_identity(stage)])) {
         if (unlink(stage.fileSystemRepresentation) != 0 && wq_grant(dir))
             unlink(stage.fileSystemRepresentation);
     }

@@ -79,6 +79,9 @@ static NSLock *gLogLock;
 
 void wq_log(NSString *format, ...)
 {
+    // Callers read errno after logging (e.g. EEXIST after a rename); NSLog
+    // and the string work below can overwrite it.
+    int savedErrno = errno;
     static dispatch_once_t once;
     dispatch_once(&once, ^{ gLog = [NSMutableString new]; gLogLock = [NSLock new]; });
     va_list args;
@@ -89,6 +92,7 @@ void wq_log(NSString *format, ...)
     [gLogLock lock];
     [gLog appendFormat:@"%@\n", line];
     [gLogLock unlock];
+    errno = savedErrno;
 }
 
 NSString *wq_log_text(void)
@@ -1915,6 +1919,7 @@ BOOL wq_rename_expecting(NSString *path, NSString *newName, NSDictionary<NSStrin
     wq_log(@"rename: %@ -> %@: %@", path, newName, ok ? @"OK" : changed ? @"changed since it was selected" : wq_errno(err));
     if (!ok && changed) return wq_selection_changed(errorText);
     if (!ok && errorText) *errorText = err == EEXIST ? WQLocalized(@"An item with that name already exists") : wq_errno(err);
+    errno = err;   // callers retry another name on EEXIST
     return ok;
 }
 
