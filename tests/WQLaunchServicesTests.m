@@ -37,9 +37,10 @@ static NSData *StoreWithName(NSString *displayName)
     Put32(data, recordOffset + 8 + 0x0c, 1u << 2);
     Put32(data, recordOffset + 8 + 0x6c, 2u << 2);
     Put32(data, recordOffset + 8 + 0x74, 3u << 2);
+    Put32(data, recordOffset + 8 + 0x00, 4u << 2);   // .app path: an app record, not a document type
 
-    NSArray<NSString *> *values = @[@"com.example.international", @"Example", displayName];
-    NSArray<NSNumber *> *offsets = @[@(idOffset), @(nameOffset), @(displayOffset)];
+    NSArray<NSString *> *values = @[@"com.example.international", @"Example", displayName, @"/Applications/Example.app"];
+    NSArray<NSNumber *> *offsets = @[@(idOffset), @(nameOffset), @(displayOffset), @(0x10c0)];
     for (NSUInteger i = 0; i < values.count; i++) {
         NSData *utf8 = [values[i] dataUsingEncoding:NSUTF8StringEncoding];
         NSUInteger offset = offsets[i].unsignedIntegerValue;
@@ -63,6 +64,11 @@ static NSData *StoreWithTruncatedDisplayName(void)
     Put32(data, recordOffset + 8 + 0x0c, 1u << 2);
     Put32(data, recordOffset + 8 + 0x6c, 3u << 2);
     Put32(data, recordOffset + 8 + 0x74, 3u << 2);
+    Put32(data, recordOffset + 8 + 0x00, 4u << 2);   // .app path: an app record
+    NSData *appPath = [@"/Applications/Example.app" dataUsingEncoding:NSUTF8StringEncoding];
+    Put32(data, 0x10c0, 4u);
+    Put32(data, 0x10c0 + 4, (uint32_t)appPath.length);
+    memcpy(bytes + 0x10c0 + 8, appPath.bytes, appPath.length);
 
     NSData *bundleID = [@"com.example.international" dataUsingEncoding:NSUTF8StringEncoding];
     Put32(data, idOffset, 1u);
@@ -172,6 +178,16 @@ static NSData *StoreWithContainers(void)
     PutString(data, 0x1280, 6, kSharedPath);
     PutString(data, 0x1300, 7, @"com.example.other");
     PutString(data, 0x1380, 8, [[kBundleContainer substringFromIndex:8] stringByAppendingString:@"/Example.app/"]);
+    // A record of the same size for a document type the app opens: its id,
+    // a localized type name where the app name would be, no container and no
+    // .app path. Never an app name (iOS 26.5: UC Browser = "Shell Script").
+    const NSUInteger docType = 0xb00;
+    Put32(data, docType + 4, 0x250);
+    Put32(data, docType + 8 + 0x0c, 9u << 2);
+    Put32(data, docType + 8 + 0x6c, 10u << 2);
+    Put32(data, docType + 8 + 0x74, 10u << 2);
+    PutString(data, 0x1400, 9, @"com.example.opener");
+    PutString(data, 0x1480, 10, @"\uC178 \uC2A4\uD06C\uB9BD\uD2B8");
     return data;
 }
 
@@ -192,6 +208,7 @@ static void TestContainerMapping(NSString *path)
     WQCheck(wq_bundle_id_for_container([kBundleContainer stringByAppendingString:@"/Example.app"]) == nil);
     // A display name whose length is a multiple of 4 has no terminator.
     WQCheck([wq_display_name(@"com.example.app") isEqualToString:@"AppName8"]);
+    WQCheck(wq_display_name(@"com.example.opener") == nil);
     // A container no record can be trusted for is still listed (UC Browser
     // missing from Apps on iOS 26.5); its label comes from the folder.
     NSArray<NSString *> *all = wq_ls_container_paths(nil);

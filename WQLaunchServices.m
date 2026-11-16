@@ -968,14 +968,27 @@ static BOOL wq_parse_ls_store(NSData *data, NSDictionary **displayOut,
         for (NSUInteger i = 0; i < recs.length / sizeof(uint32_t); i += 5) {
             NSString *bid = strings[@(r[i] >> 2)];
             if (!wq_looks_like_bundle_id(bid)) continue;
-            if (r[i + 3] && !(r[i + 3] & 3)) claim(pathFor(r[i + 3]), bid, @"/Data/Application/");
-            NSString *nm = (r[i + 1] & 3) ? nil : strings[@(r[i + 1] >> 2)];
-            NSString *dn = (r[i + 2] & 3) ? nil : strings[@(r[i + 2] >> 2)];
+            NSString *container = (r[i + 3] && !(r[i + 3] & 3)) ? pathFor(r[i + 3]) : nil;
+            if (container) claim(container, bid, @"/Data/Application/");
+            id appPath = (r[i + 4] && !(r[i + 4] & 3)) ? appPathStrings[@(r[i + 4] >> 2)] : nil;
+            // Names only from real app records: ones that point at the app's
+            // data container or its .app bundle. Other records of the same
+            // size carry an app's id too (the document types it opens), with
+            // a localized type name where the app name would be: on iOS 26.5
+            // UC Browser became "셸 스크립트" (shell script).
+            NSString *cleanContainer = [container isKindOfClass:NSString.class] ? container : nil;
+            if ([cleanContainer hasSuffix:@"/"]) cleanContainer = [cleanContainer substringToIndex:cleanContainer.length - 1];
+            if ([cleanContainer hasPrefix:@"/var/"]) cleanContainer = [@"/private" stringByAppendingString:cleanContainer];
+            BOOL appRecord = (cleanContainer && wq_is_data_container_path(cleanContainer) &&
+                              [cleanContainer containsString:@"/Data/Application/"]) ||
+                             ([appPath isKindOfClass:NSString.class] &&
+                              [[[appPath hasSuffix:@"/"] ? [appPath substringToIndex:[appPath length] - 1] : appPath pathExtension] isEqualToString:@"app"]);
+            NSString *nm = (r[i + 1] & 3) || !appRecord ? nil : strings[@(r[i + 1] >> 2)];
+            NSString *dn = (r[i + 2] & 3) || !appRecord ? nil : strings[@(r[i + 2] >> 2)];
             NSString *safeDisplay = wq_safe_name(dn);
             NSString *safeBundleName = wq_safe_name(nm);
             if (safeDisplay && !layoutDisplay[bid]) layoutDisplay[bid] = safeDisplay;
             if (safeBundleName && !layoutBundleName[bid]) layoutBundleName[bid] = safeBundleName;
-            id appPath = (r[i + 4] && !(r[i + 4] & 3)) ? appPathStrings[@(r[i + 4] >> 2)] : nil;
             if ([appPath isKindOfClass:NSString.class] && !layoutBundlePaths[bid]) {
                 NSString *clean = [appPath hasSuffix:@"/"] ? [appPath substringToIndex:[appPath length] - 1] : appPath;
                 if ([clean hasPrefix:@"/var/"]) clean = [@"/private" stringByAppendingString:clean];
