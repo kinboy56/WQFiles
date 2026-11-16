@@ -807,11 +807,15 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
         // out instead of showing as "can't be fully measured" on every scan.
         if (safeCrashPath) {
             int fd = open(crashPath.fileSystemRepresentation, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
-            if (fd < 0 && (errno == EPERM || errno == EACCES) && wq_grant(crashPath))
+            int err = fd < 0 ? errno : 0;
+            // errno is kept from the open itself: a failed grant leaves its
+            // own (it logged ENOENT for a folder that exists).
+            if (fd < 0 && (err == EPERM || err == EACCES) && wq_grant(crashPath)) {
                 fd = open(crashPath.fileSystemRepresentation, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+                if (fd < 0) err = errno;
+            }
             if (fd >= 0) close(fd);
             else {
-                int err = errno;
                 wq_log(@"cache scan: Crash Logs can't be read on this device (%@: %s, errno %d); left out",
                        crashPath, strerror(err), err);
                 crashReachable = NO;
