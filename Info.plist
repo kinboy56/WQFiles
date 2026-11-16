@@ -67,7 +67,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
+	<false/>
 	<key>MinimumOSVersion</key>
 	<string>26.0</string>
 	<key>NSLocalNetworkUsageDescription</key>
@@ -96,6 +96,42 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>cz.kolbi.wqfiles.theme</string>
+			<key>UTTypeDescription</key>
+			<string>WQ Files Theme</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>wqtheme</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>WQ Files Theme</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>cz.kolbi.wqfiles.theme</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

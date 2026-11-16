@@ -175,6 +175,44 @@ App names come from LaunchServices' own database, read from lsd's container
 only have localized names use a built-in table. Services without an icon get a
 symbol tile.
 
+## Themes
+
+**Settings → Theme** sets the colors of the new design: **Default**, **Custom Color** (pick one color, WQ Files derives the rest) or a theme you import. **Plain Background** works with all of them. A theme also colors the Wi-Fi Sharing page.
+
+A theme is a small JSON file with the extension `.wqtheme`. Open one with WQ Files (share sheet or Files app) or use **Import Theme…**; **Export Current Colors…** writes the colors you use now as a starting point. Two examples are in [`themes/`](themes).
+
+```json
+{
+  "name": "Midnight",
+  "author": "you",
+  "dark": {
+    "background": ["#05070F", "#0B1226"],
+    "glows": ["#2F6BFF9E", "#00C2FF66", "#7A5CFF55", "#00E0B03A"],
+    "accent": "#5AA9FF",
+    "card": "#1A2A5C33",
+    "plain": "#05070F"
+  },
+  "light": {
+    "background": ["#EEF3FF", "#DCE6FF"],
+    "glows": ["#7FA8FF80", "#7FE0FF60"],
+    "accent": "#2F6BFF"
+  }
+}
+```
+
+| Key | Meaning |
+|---|---|
+| `name` | 1–40 characters, required. A theme with the same name replaces the installed one. |
+| `author` | Optional. |
+| `dark`, `light` | Colors for each appearance. At least one is required; a missing one uses the other. |
+| `background` | One color, or two for a top-to-bottom gradient. Required. |
+| `glows` | Up to four soft color spots on the background, usually semi-transparent. |
+| `accent` | Buttons, tabs and links. |
+| `card` | A tint laid over the cards' blur. |
+| `plain` | The solid color used with Plain Background (default: the first background color). |
+
+Colors are `#RRGGBB` or `#RRGGBBAA`. Unknown keys are ignored, files over 64 KB are refused, and WQ Files names the problem when a file isn't valid. Themes change colors only, not the layout.
+
 ## Safety
 
 Before a regular file is overwritten or deleted, its contents are copied to

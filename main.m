@@ -31,6 +31,7 @@
 #import "WQTrash.h"
 #import "WQArchive.h"
 #import "WQWebServer.h"
+#import "WQTheme.h"
 #import "WQSyntax.h"
 #import "WQMediaStream.h"
 #import <AVKit/AVKit.h>
@@ -3538,7 +3539,14 @@ static NSString *const kSystemGroupRoot = @"/private/var/containers/Shared/Syste
     self.navigationBar.standardAppearance = appearance;
     self.navigationBar.scrollEdgeAppearance = appearance;
     self.navigationBar.compactAppearance = appearance;
-    self.navigationBar.tintColor = [UIColor colorWithRed:0.37 green:0.50 blue:1.0 alpha:1.0];
+    self.navigationBar.tintColor = wq_theme_accent();
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(themeChanged)
+                                               name:WQThemeChangedNotification object:nil];
+}
+
+- (void)themeChanged
+{
+    self.navigationBar.tintColor = wq_theme_accent();   // a new object, so the bar redraws
 }
 
 - (void)navigationController:(UINavigationController *)nav willShowViewController:(UIViewController *)vc animated:(BOOL)animated
@@ -4244,6 +4252,11 @@ static NSArray<UIColor *> *WQPrismTone(NSString *tone)
     UIVisualEffectView *_effect;
 }
 
+- (void)themeChanged
+{
+    self.backgroundColor = wq_theme_card() ?: [UIColor colorWithWhite:0.42 alpha:0.055];
+}
+
 - (instancetype)initWithRadius:(CGFloat)radius
 {
     if ((self = [super initWithFrame:CGRectZero])) {
@@ -4251,7 +4264,9 @@ static NSArray<UIColor *> *WQPrismTone(NSString *tone)
         self.layer.cornerRadius = radius;
         self.layer.cornerCurve = kCACornerCurveContinuous;
         self.clipsToBounds = YES;
-        self.backgroundColor = [UIColor colorWithWhite:0.42 alpha:0.055];
+        self.backgroundColor = wq_theme_card() ?: [UIColor colorWithWhite:0.42 alpha:0.055];
+        [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(themeChanged)
+                                                   name:WQThemeChangedNotification object:nil];
 
         _effect = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemMaterial]];
         _effect.translatesAutoresizingMaskIntoConstraints = NO;
@@ -5593,7 +5608,7 @@ static NSString *const kWQTroubleshootingFooter =
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
     // Rows 7 and 8: Background Color, and Default Colors once one is picked.
-    return section == 0 ? (wq_prism_background_color() ? 9 : 8) : section == 1 ? 4 : 1;
+    return section == 0 ? 7 : section == 1 ? 4 : 1;   // row 6: Theme
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
@@ -5606,12 +5621,11 @@ static NSString *const kWQTroubleshootingFooter =
     if (section == 2) return WQLocalized(kWQTroubleshootingFooter);
     if (section == 1) return WQLocalized(@"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain.");
     if (section != 0) return nil;
-    return [NSString stringWithFormat:@"%@\n\n%@\n\n%@\n\n%@\n\n%@",
+    return [NSString stringWithFormat:@"%@\n\n%@\n\n%@\n\n%@",
             WQLocalized(@"Allow Deleting: when off, nothing can be deleted: no Delete or swipe to delete in folders and backups, no Clear Data in Apps and no cleaning in the Cache Cleaner. Saving, moving and restoring still work.\n\nShow Item Counts: shows how many items each folder holds. Every subfolder has to be listed for this, which slows down folders with many subfolders, especially in other apps' data."),
             WQLocalized(@"Keep Data Before Restore: restoring an app or file backup first backs up what's there now, so a failed restore can be undone. When off, that backup is deleted once the restore succeeded."),
             WQLocalized(@"Reopen Last Folder: WQ Files starts in the folder you were in. Check for Updates: twice a day WQ Files reads the public release list on GitHub and shows a note when a new version is out; nothing about your device is sent."),
-            WQLocalized(@"Plain Background: a plain black (or white) background instead of the colored one."),
-            WQLocalized(@"Background Color: tints the background, colored or plain, with a color you pick. Default Colors brings back the original look.")];
+            WQLocalized(@"Theme: the colors of the new design: the built-in ones, a color you pick, or themes you import.")];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -5622,34 +5636,21 @@ static NSString *const kWQTroubleshootingFooter =
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
     UIListContentConfiguration *c = [UIListContentConfiguration subtitleCellConfiguration];
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-    if (indexPath.section == 0 && indexPath.row >= 7) {
-        if (indexPath.row == 7) {
-            c.text = WQLocalizedNullable(@"Background Color");
-            c.image = [UIImage systemImageNamed:@"paintpalette"];
-            UIColorWell *well = [[UIColorWell alloc] initWithFrame:CGRectMake(0, 0, 32, 32)];
-            well.supportsAlpha = NO;
-            well.title = WQLocalizedNullable(@"Background Color");
-            well.selectedColor = wq_prism_background_color() ?: [UIColor colorWithRed:0.30 green:0.42 blue:0.95 alpha:1];
-            __weak typeof(self) weakSelf = self;
-            [well addAction:[UIAction actionWithHandler:^(UIAction *action) {
-                BOOL had = wq_prism_background_color() != nil;
-                wq_set_prism_background_color(((UIColorWell *)action.sender).selectedColor);
-                if (!had) [weakSelf.tableView insertRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:8 inSection:0]]
-                                                     withRowAnimation:UITableViewRowAnimationFade];
-            }] forControlEvents:UIControlEventValueChanged];
-            cell.accessoryView = well;
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
-        } else {
-            c.text = WQLocalizedNullable(@"Default Colors");
-            c.image = [UIImage systemImageNamed:@"arrow.uturn.backward"];
-            c.textProperties.color = self.view.tintColor;
-        }
-        cell.contentConfiguration = c;
+    if (indexPath.section == 0 && indexPath.row == 6) {
+        UIListContentConfiguration *v = [UIListContentConfiguration valueCellConfiguration];
+        v.text = WQLocalizedNullable(@"Theme");
+        v.image = [UIImage systemImageNamed:@"paintpalette"];
+        WQTheme *theme = wq_active_theme();
+        NSString *active = wq_active_theme_id();
+        v.secondaryText = theme ? WQVerbatim(theme.name)
+            : WQLocalized([active isEqualToString:WQThemeCustomColor] ? @"Custom Color" : @"Default");
+        cell.contentConfiguration = v;
+        cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
         return cell;
     }
     if (indexPath.section == 0) {
-        NSArray<NSString *> *titles = @[@"Allow Deleting", @"Show Item Counts", @"Keep Data Before Restore", @"Reopen Last Folder", @"Check for Updates", @"New Design", @"Plain Background"];
-        NSArray<NSString *> *symbols = @[@"trash.slash", @"number", @"clock.arrow.circlepath", @"arrow.uturn.forward", @"arrow.down.circle", @"paintbrush", @"square.fill"];
+        NSArray<NSString *> *titles = @[@"Allow Deleting", @"Show Item Counts", @"Keep Data Before Restore", @"Reopen Last Folder", @"Check for Updates", @"New Design"];
+        NSArray<NSString *> *symbols = @[@"trash.slash", @"number", @"clock.arrow.circlepath", @"arrow.uturn.forward", @"arrow.down.circle", @"paintbrush"];
         c.text = WQLocalizedNullable(titles[(NSUInteger)indexPath.row]);
         c.image = [UIImage systemImageNamed:symbols[(NSUInteger)indexPath.row]];
         UISwitch *toggle = [UISwitch new];
@@ -5658,7 +5659,6 @@ static NSString *const kWQTroubleshootingFooter =
                    : indexPath.row == 3 ? ![defaults boolForKey:kWQReopenOffPref]
                    : indexPath.row == 4 ? ![defaults boolForKey:kWQUpdateCheckOffPref]
                    : indexPath.row == 5 ? wq_prism_enabled()
-                   : indexPath.row == 6 ? wq_prism_plain_background()
                    : wq_deleting_allowed();
         [toggle addAction:[UIAction actionWithHandler:^(UIAction *action) {
             BOOL on = ((UISwitch *)action.sender).isOn;
@@ -5673,7 +5673,6 @@ static NSString *const kWQTroubleshootingFooter =
                 wq_set_prism_enabled(on);
                 [self dismissViewControllerAnimated:YES completion:^{ wq_apply_design(); }];
             }
-            else if (indexPath.row == 6) wq_set_prism_plain_background(on);
             else wq_set_deleting_allowed(on);
         }] forControlEvents:UIControlEventValueChanged];
         cell.contentConfiguration = c;
@@ -5703,9 +5702,8 @@ static NSString *const kWQTroubleshootingFooter =
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
-    if (indexPath.section == 0 && indexPath.row == 8) {
-        wq_set_prism_background_color(nil);
-        [tableView reloadSections:[NSIndexSet indexSetWithIndex:0] withRowAnimation:UITableViewRowAnimationFade];
+    if (indexPath.section == 0 && indexPath.row == 6) {
+        [self.navigationController pushViewController:wq_theme_settings_controller() animated:YES];
         return;
     }
     if (indexPath.section == 0) return;
@@ -5824,7 +5822,10 @@ static NSString *const kWQTroubleshootingFooter =
 
     self.viewControllers = @[homeNav, appsNav, cleanNav, vaultNav];
     self.selectedIndex = 0;
-    self.tabBar.tintColor = [UIColor colorWithRed:0.37 green:0.50 blue:1.0 alpha:1.0];
+    self.tabBar.tintColor = wq_theme_accent();
+    __weak typeof(self) weakSelf = self;
+    [NSNotificationCenter.defaultCenter addObserverForName:WQThemeChangedNotification object:nil queue:NSOperationQueue.mainQueue
+                                                usingBlock:^(NSNotification *__unused n) { weakSelf.tabBar.tintColor = wq_theme_accent(); }];
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -6598,6 +6599,8 @@ static UIViewController *wq_make_root_view_controller(void)
     return [[WQNavigationController alloc] initWithRootViewController:[WQRootViewController new]];
 }
 
+static UIViewController *wq_top_view_controller(void);
+
 @interface WQSceneDelegate : UIResponder <UIWindowSceneDelegate>
 @property (nonatomic, strong) UIWindow *window;
 @end
@@ -6610,6 +6613,29 @@ static UIViewController *wq_make_root_view_controller(void)
     window.rootViewController = wq_make_root_view_controller();
     [window makeKeyAndVisible];
     self.window = window;
+    [self applyThemeTint];
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(applyThemeTint)
+                                               name:WQThemeChangedNotification object:nil];
+    if (options.URLContexts.count) [self scene:scene openURLContexts:options.URLContexts];
+}
+
+// A theme's accent colors the whole window (the iPad's floating tab bar only
+// follows the window); without one, the system default stays.
+- (void)applyThemeTint
+{
+    WQTheme *theme = wq_active_theme();
+    BOOL accent = [theme appearanceDark:YES].accent || [theme appearanceDark:NO].accent;
+    self.window.tintColor = accent ? wq_theme_accent() : nil;
+}
+
+// A .wqtheme file opened with WQ Files (share sheet, Files app).
+- (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)contexts
+{
+    for (UIOpenURLContext *context in contexts) {
+        NSURL *url = context.URL;
+        if (!url.isFileURL || ![url.pathExtension.lowercaseString isEqualToString:@"wqtheme"]) continue;
+        dispatch_async(dispatch_get_main_queue(), ^{ wq_import_theme_url(wq_top_view_controller(), url); });
+    }
 }
 
 @end

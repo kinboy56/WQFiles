@@ -16,6 +16,7 @@
 #import "WQLaunchServices.h"
 #import "WQLocalization.h"
 #import "WQUI.h"
+#import "WQTheme.h"
 #import <UIKit/UIKit.h>
 #import <CoreImage/CoreImage.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
@@ -869,6 +870,7 @@ static NSString *WQWebTone(WQWebItem *item)
         "body{background:%@}"
         "@media (prefers-color-scheme:dark){:root{--text:#f4f6ff;--sub:rgba(226,232,255,.62);--card:rgba(28,30,40,.66);"
         "--stroke:rgba(255,255,255,.08);--sep:rgba(255,255,255,.08);--accent:#8aa2ff;--pill:rgba(94,128,255,.2)}body{background:%@}}"
+        "%@"
         ".list{backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);box-shadow:0 10px 30px rgba(0,0,0,.12)}"
         ".icon{border-radius:10px;color:#fff;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.25)}"
         ".row+.row:before{left:66px}"
@@ -877,7 +879,18 @@ static NSString *WQWebTone(WQWebItem *item)
         ".amber{background:linear-gradient(135deg,#ffd970,#f2a400)}.mint{background:linear-gradient(135deg,#62ebc8,#12b39a)}"
         ".indigo{background:linear-gradient(135deg,#9ea3ff,#5658e8)}.gray{background:linear-gradient(135deg,#b7bfd0,#7b8498)}"
         "h1{font-size:36px}",
-        backdrop(NO), backdrop(YES)];
+        backdrop(NO), backdrop(YES), [self themeAccentCSS]];
+    return css;
+}
+
+// An imported theme's accent replaces the page's default blue.
+- (NSString *)themeAccentCSS
+{
+    WQTheme *theme = wq_active_theme();
+    UIColor *light = [theme appearanceDark:NO].accent, *dark = [theme appearanceDark:YES].accent;
+    NSMutableString *css = [NSMutableString new];
+    if (light) [css appendFormat:@":root{--accent:%@;--pill:%@}", WQWebCSSColor(light), WQWebCSSColor([light colorWithAlphaComponent:0.14])];
+    if (dark) [css appendFormat:@"@media (prefers-color-scheme:dark){:root{--accent:%@;--pill:%@}}", WQWebCSSColor(dark), WQWebCSSColor([dark colorWithAlphaComponent:0.2])];
     return css;
 }
 

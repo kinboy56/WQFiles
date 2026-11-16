@@ -6,6 +6,7 @@
 
 #import "WQUI.h"
 #import "WQScanTask.h"
+#import "WQTheme.h"
 #import "WQAccess.h"
 #import "WQLaunchServices.h"
 #import <fcntl.h>
@@ -484,7 +485,21 @@ WQPrismPalette *wq_prism_palette(BOOL dark)
 {
     WQPrismPalette *p = [WQPrismPalette new];
     BOOL plain = wq_prism_plain_background();
-    UIColor *custom = wq_prism_background_color();
+    // An imported theme (Settings → Theme) brings its own colors.
+    WQTheme *theme = wq_active_theme();
+    if (theme) {
+        WQThemeAppearance *a = [theme appearanceDark:dark];
+        if (plain) {
+            p.baseTop = p.baseBottom = a.plain ?: a.baseTop;
+            p.glows = @[];
+        } else {
+            p.baseTop = a.baseTop;
+            p.baseBottom = a.baseBottom;
+            p.glows = a.glows;
+        }
+        return p;
+    }
+    UIColor *custom = [wq_active_theme_id() isEqualToString:WQThemeCustomColor] ? wq_prism_background_color() : nil;
     if (plain) {
         // Plain black (dark) or white (light) like the classic design, or the
         // picked color kept dark or pale enough for text.
