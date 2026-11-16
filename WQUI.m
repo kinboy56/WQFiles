@@ -99,15 +99,30 @@ static UIImage *wq_raw_icon(NSString *bundleID)
 // The real icon for bundleID, or nil when iOS only has its placeholder.
 static UIImage *wq_real_icon(NSString *bundleID)
 {
+    // Not dispatch_once: off the main thread UIKit's icon call waits for the
+    // main thread, so a background icon warm-up inside a once-block while a
+    // table cell on the main thread waited for the same block deadlocked
+    // (frozen UI, then a watchdog kill). Every thread may compute it; the
+    // first result is kept.
     static NSData *placeholder;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{ placeholder = wq_icon_fingerprint(wq_raw_icon(@"cz.kolbi.wqfiles.no-such-app")); });
+    static NSObject *guard;
+    static dispatch_once_t guardOnce;   // only allocates, never calls UIKit
+    dispatch_once(&guardOnce, ^{ guard = [NSObject new]; });
+    NSData *known;
+    @synchronized (guard) { known = placeholder; }
+    if (!known) {
+        NSData *fresh = wq_icon_fingerprint(wq_raw_icon(@"cz.kolbi.wqfiles.no-such-app"));
+        @synchronized (guard) {
+            if (!placeholder) placeholder = fresh;
+            known = placeholder;
+        }
+    }
     UIImage *raw = wq_raw_icon(bundleID);
     if (!raw || !raw.CGImage) return nil;
     NSData *fp = wq_icon_fingerprint(raw);
-    if (!placeholder || fp.length != placeholder.length) return raw;
+    if (!known || fp.length != known.length) return raw;
     // Near-identical to the placeholder (allow small rendering differences).
-    const uint8_t *a = fp.bytes, *b = placeholder.bytes;
+    const uint8_t *a = fp.bytes, *b = known.bytes;
     unsigned long diff = 0;
     for (NSUInteger i = 0; i < fp.length; i++) diff += (unsigned long)abs((int)a[i] - (int)b[i]);
     return diff / fp.length < 8 ? nil : raw;
