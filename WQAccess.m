@@ -3243,6 +3243,18 @@ WQMeasureResult wq_measure_tree_resumable(NSString *dir, NSString *scope, NSStri
     // Small directories finish before the first save; a finished measurement
     // removes its journal.
     NSTimeInterval lastSave = NSDate.date.timeIntervalSinceReferenceDate;
+    // Sandbox tokens are asked for sparingly: a token for the measured folder
+    // covers its subfolders, so a denied subfolder gets at most a few tries per
+    // measurement (a failed query isn't remembered by wq_grant and costs two
+    // round trips under the global grant lock). EACCES is file permissions,
+    // which no token changes.
+    __block NSUInteger grantTries = 0;
+    __block NSUInteger skipped = 0;
+    __block NSString *firstLimit = nil;
+    void (^noteLimit)(NSString *, int) = ^(NSString *what, int err) {
+        limited = YES;
+        if (!firstLimit) firstLimit = [NSString stringWithFormat:@"%@ (%@)", what, wq_errno(err)];
+    };
     while (pending.count) {
         if (!wq_scan_wait(cancellation)) return WQMeasureResultCancelled;
         // A slice of directories per trip to the mutation queue. Never hold a
@@ -3257,11 +3269,20 @@ WQMeasureResult wq_measure_tree_resumable(NSString *dir, NSString *scope, NSStri
                 // types), so a component can only be a link after a swap, and
                 // measuring never writes. Walking every path from "/" again
                 // cost about ten opens per directory.
+                BOOL isRoot = [path isEqualToString:dir];
                 int fd = open(path.fileSystemRepresentation, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
-                if (fd < 0 && wq_is_denied(errno) && wq_grant(path))
-                    fd = open(path.fileSystemRepresentation, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+                if (fd < 0 && (isRoot ? wq_is_denied(errno) : errno == EPERM && grantTries < 3)) {
+                    int denied = errno;
+                    if (!isRoot) grantTries++;
+                    if (wq_grant(path)) fd = open(path.fileSystemRepresentation, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+                    else errno = denied;
+                }
+                // A subfolder removed since it was listed (crash logs and
+                // caches change while they are measured) was simply not there.
+                if (fd < 0 && !isRoot && (errno == ENOENT || errno == ENOTDIR)) { skipped++; continue; }
+                int openErr = errno;
                 DIR *stream = fd >= 0 ? fdopendir(fd) : NULL;
-                if (!stream) { if (fd >= 0) close(fd); limited = YES; continue; }
+                if (!stream) { if (fd >= 0) { openErr = errno; close(fd); } noteLimit(path, openErr); continue; }
                 struct dirent *entry;
                 errno = 0;
                 while ((entry = readdir(stream))) {
@@ -3269,7 +3290,13 @@ WQMeasureResult wq_measure_tree_resumable(NSString *dir, NSString *scope, NSStri
                     if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) continue;
                     if (entry->d_type == DT_LNK) continue;
                     struct stat st;
-                    if (fstatat(fd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW) != 0) { limited = YES; errno = 0; continue; }
+                    if (fstatat(fd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW) != 0) {
+                        int err = errno;
+                        if (err == ENOENT) skipped++;   // removed since it was listed
+                        else noteLimit([path stringByAppendingPathComponent:@(entry->d_name)], err);
+                        errno = 0;
+                        continue;
+                    }
                     if (S_ISREG(st.st_mode)) total += (unsigned long long)MAX((off_t)0, st.st_size);
                     else if (S_ISDIR(st.st_mode)) {
                         NSString *name = [NSFileManager.defaultManager stringWithFileSystemRepresentation:entry->d_name length:strlen(entry->d_name)];
@@ -3277,7 +3304,7 @@ WQMeasureResult wq_measure_tree_resumable(NSString *dir, NSString *scope, NSStri
                     }
                     errno = 0;
                 }
-                if (errno) limited = YES;
+                if (errno) noteLimit(path, errno);
                 closedir(stream);
             } while (pending.count && CFAbsoluteTimeGetCurrent() - sliceStart < kWQMeasureSlice);
         });
@@ -3292,6 +3319,8 @@ WQMeasureResult wq_measure_tree_resumable(NSString *dir, NSString *scope, NSStri
     }
     WQScanJournalRemove(key);
     if (bytes) *bytes = total;
+    if (firstLimit) wq_log(@"measure: %@ limited, first at %@", dir.lastPathComponent, firstLimit);
+    if (skipped) wq_log(@"measure: %@: %lu entries removed while measuring", dir.lastPathComponent, (unsigned long)skipped);
     return limited ? WQMeasureResultLimited : WQMeasureResultKnown;
 }
 
