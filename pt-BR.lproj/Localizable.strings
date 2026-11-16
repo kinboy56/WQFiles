@@ -1029,3 +1029,9 @@
 "Use Random Password" = "Usar senha aleatória";
 "The password could not be saved in the keychain." = "Não foi possível salvar a senha nas Chaves.";
 "Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Senha de compartilhamento: uma senha fixa para o compartilhamento Wi-Fi em vez de uma nova aleatória a cada vez. Ela fica guardada nas Chaves.";
+"Recent" = "Recentes";
+"Show All" = "Mostrar tudo";
+"Clear" = "Limpar";
+"Clear Recent" = "Limpar recentes";
+"Remove from Recent" = "Remover dos recentes";
+"Folders and files you open show up here." = "As pastas e os arquivos que você abrir aparecem aqui.";

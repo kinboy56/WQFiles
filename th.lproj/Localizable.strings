@@ -1029,3 +1029,9 @@
 "Use Random Password" = "ใช้รหัสผ่านแบบสุ่ม";
 "The password could not be saved in the keychain." = "ไม่สามารถบันทึกรหัสผ่านลงในพวงกุญแจได้";
 "Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "รหัสผ่านการแชร์: รหัสผ่านคงที่สำหรับการแชร์ผ่าน Wi-Fi แทนการสุ่มใหม่ทุกครั้ง เก็บไว้ในพวงกุญแจ";
+"Recent" = "ล่าสุด";
+"Show All" = "แสดงทั้งหมด";
+"Clear" = "ล้าง";
+"Clear Recent" = "ล้างรายการล่าสุด";
+"Remove from Recent" = "เอาออกจากรายการล่าสุด";
+"Folders and files you open show up here." = "โฟลเดอร์และไฟล์ที่คุณเปิดจะแสดงที่นี่";

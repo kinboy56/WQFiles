@@ -1029,3 +1029,9 @@
 "Use Random Password" = "Dùng mật khẩu ngẫu nhiên";
 "The password could not be saved in the keychain." = "Không thể lưu mật khẩu vào chuỗi khóa.";
 "Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Mật khẩu chia sẻ: mật khẩu cố định cho Chia sẻ Wi-Fi thay vì mật khẩu ngẫu nhiên mới mỗi lần. Được lưu trong chuỗi khóa.";
+"Recent" = "Gần đây";
+"Show All" = "Hiện tất cả";
+"Clear" = "Xóa";
+"Clear Recent" = "Xóa mục gần đây";
+"Remove from Recent" = "Xóa khỏi Gần đây";
+"Folders and files you open show up here." = "Các thư mục và tệp bạn mở sẽ hiện ở đây.";

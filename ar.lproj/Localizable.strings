@@ -1025,3 +1025,9 @@
 "Use Random Password" = "استخدام كلمة سر عشوائية";
 "The password could not be saved in the keychain." = "تعذّر حفظ كلمة السر في سلسلة المفاتيح.";
 "Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "كلمة سر المشاركة: كلمة سر ثابتة للمشاركة عبر Wi-Fi بدل كلمة عشوائية جديدة في كل مرة. تُحفظ في سلسلة المفاتيح.";
+"Recent" = "الأخيرة";
+"Show All" = "عرض الكل";
+"Clear" = "مسح";
+"Clear Recent" = "مسح الأخيرة";
+"Remove from Recent" = "إزالة من الأخيرة";
+"Folders and files you open show up here." = "تظهر هنا المجلدات والملفات التي تفتحها.";

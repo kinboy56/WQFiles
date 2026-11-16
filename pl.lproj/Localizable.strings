@@ -1029,3 +1029,9 @@
 "Use Random Password" = "Użyj losowego hasła";
 "The password could not be saved in the keychain." = "Nie udało się zapisać hasła w pęku kluczy.";
 "Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Hasło udostępniania: stałe hasło do udostępniania Wi-Fi zamiast nowego losowego za każdym razem. Jest przechowywane w pęku kluczy.";
+"Recent" = "Ostatnie";
+"Show All" = "Pokaż wszystko";
+"Clear" = "Wyczyść";
+"Clear Recent" = "Wyczyść ostatnie";
+"Remove from Recent" = "Usuń z ostatnich";
+"Folders and files you open show up here." = "Tutaj pojawią się otwierane foldery i pliki.";

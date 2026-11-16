@@ -1029,3 +1029,9 @@
 "Use Random Password" = "Использовать случайный пароль";
 "The password could not be saved in the keychain." = "Не удалось сохранить пароль в связке ключей.";
 "Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Пароль доступа: постоянный пароль для доступа по Wi-Fi вместо нового случайного каждый раз. Хранится в связке ключей.";
+"Recent" = "Недавние";
+"Show All" = "Показать все";
+"Clear" = "Очистить";
+"Clear Recent" = "Очистить недавние";
+"Remove from Recent" = "Убрать из недавних";
+"Folders and files you open show up here." = "Здесь появятся папки и файлы, которые вы открываете.";

@@ -101,6 +101,7 @@ static BOOL wq_show_item_counts(void)
 typedef NS_ENUM(NSInteger, WQOpenMode) { WQOpenAuto, WQOpenPlist, WQOpenText, WQOpenHex, WQOpenSQLite, WQOpenMedia };
 // Opens a file in the fitting viewer (Auto: chosen from its first bytes).
 static void wq_open_file(UINavigationController *nav, NSString *path, BOOL readOnly, WQOpenMode mode);
+static void wq_add_recent(NSString *rawPath, NSString *title, BOOL directory, BOOL readOnly);
 
 typedef NS_ENUM(NSInteger, WQViewKind) { WQViewText, WQViewPlist, WQViewImage, WQViewHex };
 
@@ -692,6 +693,7 @@ static void wq_open_media(UINavigationController *nav, NSString *path, BOOL (^st
 static void wq_open_file(UINavigationController *nav, NSString *path, BOOL readOnly, WQOpenMode mode)
 {
     if (!nav || !path.length) return;
+    wq_add_recent(path, path.lastPathComponent, NO, readOnly);
     // All calls originate on the main thread. A newer explicit or automatic
     // open invalidates older sniff requests, and leaving the originating screen
     // also prevents a late push.
@@ -861,6 +863,115 @@ static void wq_set_favorite(NSString *path, NSString *title, BOOL readOnly, BOOL
     else if (!add && index != NSNotFound)
         [favorites removeObjectAtIndex:index];
     [NSUserDefaults.standardUserDefaults setObject:favorites forKey:kWQFavorites];
+}
+
+// Recent folders and files (home screen "Recent", classic Tools → Recent).
+// Newest first, at most kWQRecentsMax. Entry points that are always on the
+// home screen (container roots, backups) aren't recorded. Drilling down
+// replaces the folders passed through on the way (within two minutes), so
+// App Data → WhatsApp → Documents leaves Documents, not all three.
+static NSString *const kWQRecents = @"WQRecents";
+static NSString *const kWQRecentsChanged = @"WQRecentsChanged";
+static const NSUInteger kWQRecentsMax = 10;
+
+static NSArray<NSDictionary *> *wq_recents(void)
+{
+    NSMutableArray *valid = [NSMutableArray new];
+    for (id entry in [NSUserDefaults.standardUserDefaults arrayForKey:kWQRecents] ?: @[])
+        if ([entry isKindOfClass:NSDictionary.class] && [entry[@"path"] isKindOfClass:NSString.class]) [valid addObject:entry];
+    return valid;
+}
+
+static void wq_save_recents(NSArray<NSDictionary *> *list)
+{
+    [NSUserDefaults.standardUserDefaults setObject:list forKey:kWQRecents];
+    [NSNotificationCenter.defaultCenter postNotificationName:kWQRecentsChanged object:nil];
+}
+
+// The container a path lies in (".../Data/Application/<UUID>"), or nil.
+static NSString *wq_recent_container(NSString *path)
+{
+    for (NSString *root in @[@"/private/var/mobile/Containers/Data/Application", @"/private/var/mobile/Containers/Data/PluginKitPlugin",
+                             @"/private/var/mobile/Containers/Shared/AppGroup", @"/private/var/mobile/Containers/Data/InternalDaemon",
+                             @"/private/var/containers/Data/System", @"/private/var/containers/Shared/SystemGroup"]) {
+        NSString *prefix = [root stringByAppendingString:@"/"];
+        if (![path hasPrefix:prefix]) continue;
+        NSString *uuid = [path substringFromIndex:prefix.length].pathComponents.firstObject;
+        return uuid.length == 36 ? [prefix stringByAppendingString:uuid] : nil;
+    }
+    return nil;
+}
+
+static BOOL wq_recent_skipped(NSString *path)
+{
+    NSMutableSet *roots = [NSMutableSet setWithArray:@[@"/", @"/private/var", @"/private/var/mobile",
+        @"/private/var/mobile/Containers/Data/Application", @"/private/var/mobile/Containers/Data/PluginKitPlugin",
+        @"/private/var/mobile/Containers/Shared/AppGroup", @"/private/var/mobile/Containers/Data/InternalDaemon",
+        @"/private/var/containers/Data/System", @"/private/var/containers/Shared/SystemGroup",
+        @"/private/var/containers/Bundle/Application"]];
+    if (wq_backup_root().length) [roots addObject:WQCanonicalVarPath(wq_backup_root())];
+    if (wq_app_backup_root().length) [roots addObject:WQCanonicalVarPath(wq_app_backup_root())];
+    return [roots containsObject:path];
+}
+
+static void wq_add_recent(NSString *rawPath, NSString *title, BOOL directory, BOOL readOnly)
+{
+    if (!rawPath.length) return;
+    NSString *path = WQCanonicalVarPath(rawPath);
+    if (wq_recent_skipped(path)) return;
+    NSMutableArray<NSDictionary *> *list = [NSMutableArray new];
+    for (NSDictionary *entry in wq_recents()) {
+        NSString *other = entry[@"path"];
+        if ([other isEqualToString:path]) continue;
+        NSDate *when = [entry[@"date"] isKindOfClass:NSDate.class] ? entry[@"date"] : nil;
+        if (directory && [entry[@"dir"] boolValue] && [path hasPrefix:[other stringByAppendingString:@"/"]] &&
+            when && -when.timeIntervalSinceNow < 120) continue;   // passed through on the way here
+        [list addObject:entry];
+    }
+    NSMutableDictionary *entry = [@{@"path": path, @"title": title.length ? title : path.lastPathComponent,
+                                    @"dir": @(directory), @"readOnly": @(readOnly), @"date": NSDate.date} mutableCopy];
+    [list insertObject:entry atIndex:0];
+    while (list.count > kWQRecentsMax) [list removeLastObject];
+    wq_save_recents(list);
+    // Which app it belongs to, for the subtitle: needs the container's label,
+    // which can mean file access, so never on the main thread.
+    NSString *container = wq_recent_container(path);
+    if (!container) return;
+    dispatch_async(wq_io(), ^{
+        NSString *bid = wq_container_label(container);
+        NSString *app = bid ? (wq_display_name(bid) ?: bid) : nil;
+        if (!app.length) return;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSMutableArray<NSDictionary *> *current = [wq_recents() mutableCopy];
+            for (NSUInteger i = 0; i < current.count; i++) {
+                if (![current[i][@"path"] isEqualToString:path]) continue;
+                NSMutableDictionary *updated = [current[i] mutableCopy];
+                updated[@"app"] = app;
+                current[i] = updated;
+                wq_save_recents(current);
+                break;
+            }
+        });
+    });
+}
+
+static void wq_remove_recent(NSString *path)
+{
+    NSMutableArray<NSDictionary *> *list = [wq_recents() mutableCopy];
+    [list filterUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSDictionary *entry, NSDictionary *__unused bindings) {
+        return ![entry[@"path"] isEqualToString:path];
+    }]];
+    wq_save_recents(list);
+}
+
+// "WhatsApp · Documents/Chats" for a path inside a container, else the path.
+static NSString *wq_recent_subtitle(NSDictionary *entry)
+{
+    NSString *path = entry[@"path"], *app = [entry[@"app"] isKindOfClass:NSString.class] ? entry[@"app"] : nil;
+    NSString *container = wq_recent_container(path);
+    if (!app.length || !container) return path;
+    NSString *inside = path.length > container.length ? [path substringFromIndex:container.length + 1] : @"";
+    return inside.length ? [NSString stringWithFormat:@"%@ · %@", app, inside] : app;
 }
 
 // Items picked with Move, waiting for "Move Here" in another folder, with the
@@ -1265,6 +1376,7 @@ static NSString *wq_info_date(struct timespec ts)
     NSString *_path;
     NSArray<WQItem *> *_all;     // everything in the folder
     BOOL _allEnumerated;         // _all came from container enumeration (the folder itself can't be listed)
+    BOOL _recordedRecent;        // added to Recent when it first appeared
     NSArray<WQItem *> *_items;   // what the search lets through (shown)
     NSString *_query;
     UILabel *_pathLabel;
@@ -1450,6 +1562,11 @@ static NSString *wq_info_date(struct timespec ts)
 - (void)viewDidAppear:(BOOL)animated
 {
     [super viewDidAppear:animated];
+    // Recent: once per screen, so going back up doesn't reorder the list.
+    if (!_recordedRecent) {
+        _recordedRecent = YES;
+        wq_add_recent(_path, _baseTitle, YES, self.readOnly);
+    }
     // The folder in front is the one to reopen at the next launch.
     if (![NSUserDefaults.standardUserDefaults boolForKey:kWQReopenOffPref])
         [NSUserDefaults.standardUserDefaults setObject:@{ @"path": _path, @"title": _baseTitle ?: _path.lastPathComponent,
@@ -3860,6 +3977,160 @@ static UIImage *wq_language_flag(NSString *code)
 
 @end
 
+#pragma mark - Recent
+
+// Opens a Recent entry: a folder in the browser, a file in its viewer. A
+// missing item is taken off the list.
+static void wq_open_recent(UIViewController *host, NSDictionary *entry)
+{
+    NSString *path = entry[@"path"], *title = entry[@"title"];
+    BOOL readOnly = [entry[@"readOnly"] boolValue];
+    __weak UIViewController *weakHost = host;
+    dispatch_async(wq_io(), ^{
+        struct stat st;
+        BOOL exists = wq_stat(path, &st);
+        BOOL directory = exists && S_ISDIR(st.st_mode);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIViewController *current = weakHost;
+            if (!current) return;
+            if (!exists) {
+                wq_remove_recent(path);
+                wq_alert(current, @"Not found", WQVerbatim(path));
+                return;
+            }
+            if (directory) {
+                WQDirViewController *folder = [[WQDirViewController alloc] initWithPath:path title:title];
+                folder.readOnly = readOnly;
+                [current.navigationController pushViewController:folder animated:YES];
+            } else {
+                wq_open_file(current.navigationController, path, readOnly, WQOpenAuto);
+            }
+        });
+    });
+}
+
+static UIMenu *wq_recent_menu(NSDictionary *entry)
+{
+    NSString *path = entry[@"path"];
+    NSMutableArray<UIMenuElement *> *items = [NSMutableArray new];
+    if ([entry[@"dir"] boolValue] && wq_favorite_index(wq_favorites(), path) == NSNotFound) {
+        [items addObject:[UIAction actionWithTitle:WQLocalized(@"Add to Favorites") image:[UIImage systemImageNamed:@"star"] identifier:nil
+                                           handler:^(UIAction *__unused a) {
+            wq_set_favorite(path, entry[@"title"], [entry[@"readOnly"] boolValue], YES);
+            [NSNotificationCenter.defaultCenter postNotificationName:kWQRecentsChanged object:nil];
+        }]];
+    }
+    [items addObject:[UIAction actionWithTitle:WQLocalized(@"Copy Path") image:[UIImage systemImageNamed:@"doc.on.doc"] identifier:nil
+                                       handler:^(UIAction *__unused a) { UIPasteboard.generalPasteboard.string = path; }]];
+    [items addObject:[UIAction actionWithTitle:WQLocalized(@"Remove from Recent") image:[UIImage systemImageNamed:@"minus.circle"] identifier:nil
+                                       handler:^(UIAction *__unused a) { wq_remove_recent(path); }]];
+    UIAction *clear = [UIAction actionWithTitle:WQLocalized(@"Clear Recent") image:[UIImage systemImageNamed:@"clock.badge.xmark"] identifier:nil
+                                        handler:^(UIAction *__unused a) { wq_save_recents(@[]); }];
+    clear.attributes = UIMenuElementAttributesDestructive;
+    [items addObject:[UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[clear]]];
+    return [UIMenu menuWithTitle:WQVerbatim(wq_recent_subtitle(entry)) children:items];
+}
+
+@interface WQRecentsViewController : UITableViewController
+@end
+
+@implementation WQRecentsViewController {
+    NSArray<NSDictionary *> *_recents;
+}
+
+- (instancetype)init
+{
+    if ((self = [super initWithStyle:UITableViewStyleInsetGrouped])) self.title = WQLocalized(@"Recent");
+    return self;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    if (wq_prism_enabled()) {
+        wq_prism_install_background(self);
+        self.tableView.backgroundColor = UIColor.clearColor;
+    }
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:WQLocalized(@"Clear")
+        style:UIBarButtonItemStylePlain target:self action:@selector(clear)];
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(reload) name:kWQRecentsChanged object:nil];
+    [self reload];
+}
+
+- (void)dealloc
+{
+    [NSNotificationCenter.defaultCenter removeObserver:self];
+}
+
+- (void)reload
+{
+    _recents = wq_recents();
+    self.navigationItem.rightBarButtonItem.enabled = _recents.count > 0;
+    [self.tableView reloadData];
+}
+
+- (void)clear
+{
+    wq_save_recents(@[]);
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return (NSInteger)_recents.count;
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
+{
+    return _recents.count ? nil : WQLocalized(@"Folders and files you open show up here.");
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSDictionary *entry = _recents[(NSUInteger)indexPath.row];
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"recent"]
+        ?: [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"recent"];
+    UIListContentConfiguration *content = [UIListContentConfiguration subtitleCellConfiguration];
+    content.text = WQVerbatim(entry[@"title"]);
+    content.secondaryText = WQVerbatim(wq_recent_subtitle(entry));
+    content.secondaryTextProperties.lineBreakMode = NSLineBreakByTruncatingMiddle;
+    content.secondaryTextProperties.numberOfLines = 1;
+    content.image = [UIImage systemImageNamed:[entry[@"dir"] boolValue] ? @"folder" : @"doc"];
+    cell.contentConfiguration = content;
+    cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    wq_open_recent(self, _recents[(NSUInteger)indexPath.row]);
+}
+
+- (UIContextMenuConfiguration *)tableView:(UITableView *)tableView contextMenuConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath point:(CGPoint)point
+{
+    NSDictionary *entry = _recents[(NSUInteger)indexPath.row];
+    return [UIContextMenuConfiguration configurationWithIdentifier:nil previewProvider:nil
+                                                    actionProvider:^UIMenu *(NSArray<UIMenuElement *> *__unused suggested) {
+        return wq_recent_menu(entry);
+    }];
+}
+
+- (UISwipeActionsConfiguration *)tableView:(UITableView *)tableView trailingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSString *path = _recents[(NSUInteger)indexPath.row][@"path"];
+    UIContextualAction *remove = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleNormal
+        title:WQLocalized(@"Remove from Recent") handler:^(UIContextualAction *__unused action, UIView *__unused view, void (^completion)(BOOL)) {
+            wq_remove_recent(path);
+            completion(YES);
+        }];
+    remove.backgroundColor = UIColor.systemGrayColor;
+    UISwipeActionsConfiguration *config = [UISwipeActionsConfiguration configurationWithActions:@[remove]];
+    config.performsFirstActionWithFullSwipe = NO;
+    return config;
+}
+
+@end
+
 @interface WQFavoritesViewController : UITableViewController
 @end
 
@@ -4256,6 +4527,8 @@ static void wq_apply_design(void);
     UIStackView *_contentStack;
     UIStackView *_containersStack;
     UIStackView *_favoritesStack;
+    UIStackView *_recentRows;
+    UIView *_recentSection;
     UIStackView *_systemRows;
     UIView *_systemSection;
     UIView *_heroView;
@@ -4298,8 +4571,11 @@ static void wq_apply_design(void);
     [self rebuildLocations];
     [self rebuildContainers];
     [self rebuildFavorites];
+    [self rebuildRecents];
     [self rebuildSystem];
     [self updateHealthUI];
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(recentsChanged)
+                                               name:kWQRecentsChanged object:nil];
 
     __weak typeof(self) weakSelf = self;
     dispatch_async(wq_io(), ^{
@@ -4394,6 +4670,7 @@ static void wq_apply_design(void);
     [_contentStack setCustomSpacing:16 afterView:favoritesHeader];
     [_contentStack addArrangedSubview:[self buildFavoritesRail]];
 
+    [self buildRecentSection];
     [self buildSystemSection];
     [_contentStack addArrangedSubview:[self buildFooter]];
 
@@ -4543,6 +4820,105 @@ static void wq_apply_design(void);
         [_favoritesStack.heightAnchor constraintEqualToAnchor:rail.frameLayoutGuide.heightAnchor],
     ]];
     return rail;
+}
+
+- (void)recentsChanged
+{
+    [self rebuildRecents];
+    [self rebuildFavorites];   // "Add to Favorites" from a Recent menu
+}
+
+- (void)buildRecentSection
+{
+    UIStackView *stack = [[UIStackView alloc] initWithFrame:CGRectZero];
+    stack.axis = UILayoutConstraintAxisVertical;
+    stack.spacing = 10;
+    [stack addArrangedSubview:WQPrismSectionHeaderView(WQLocalizedNullable(@"Recent"), nil)];
+    WQPrismGlassView *glass = [[WQPrismGlassView alloc] initWithRadius:22];
+    UIStackView *rows = [[UIStackView alloc] initWithFrame:CGRectZero];
+    rows.translatesAutoresizingMaskIntoConstraints = NO;
+    rows.axis = UILayoutConstraintAxisVertical;
+    [glass.contentView addSubview:rows];
+    [NSLayoutConstraint activateConstraints:@[
+        [rows.topAnchor constraintEqualToAnchor:glass.contentView.topAnchor constant:4],
+        [rows.bottomAnchor constraintEqualToAnchor:glass.contentView.bottomAnchor constant:-4],
+        [rows.leadingAnchor constraintEqualToAnchor:glass.contentView.leadingAnchor constant:10],
+        [rows.trailingAnchor constraintEqualToAnchor:glass.contentView.trailingAnchor constant:-10],
+    ]];
+    _recentRows = rows;
+    _recentSection = stack;
+    [stack addArrangedSubview:glass];
+    [_contentStack addArrangedSubview:stack];
+    [_contentStack setCustomSpacing:16 afterView:stack];
+}
+
+// Five newest on the home screen; "Show All" opens the full list.
+- (void)rebuildRecents
+{
+    for (UIView *view in _recentRows.arrangedSubviews) {
+        [_recentRows removeArrangedSubview:view];
+        [view removeFromSuperview];
+    }
+    NSArray<NSDictionary *> *recents = wq_recents();
+    _recentSection.hidden = recents.count == 0;
+    __weak typeof(self) weakSelf = self;
+    for (NSUInteger i = 0; i < MIN(recents.count, (NSUInteger)5); i++) {
+        NSDictionary *entry = recents[i];
+        BOOL directory = [entry[@"dir"] boolValue];
+        UIButton *row = [self listRowWithTitle:WQVerbatim(entry[@"title"]) subtitle:WQVerbatim(wq_recent_subtitle(entry))
+                                        symbol:directory ? @"folder.fill" : @"doc.fill" tone:directory ? @"sky" : @"indigo"];
+        [row addAction:[UIAction actionWithHandler:^(UIAction *__unused a) { wq_open_recent(weakSelf, entry); }]
+      forControlEvents:UIControlEventTouchUpInside];
+        row.menu = wq_recent_menu(entry);   // long-press
+        [_recentRows addArrangedSubview:row];
+    }
+    if (recents.count > 5) {
+        UIButton *all = [self listRowWithTitle:WQLocalized(@"Show All") subtitle:WQLocalizedFormat(@"%lu items", (unsigned long)recents.count)
+                                        symbol:@"clock.arrow.circlepath" tone:@"gray"];
+        [all addAction:[UIAction actionWithHandler:^(UIAction *__unused a) {
+            [weakSelf.navigationController pushViewController:[WQRecentsViewController new] animated:YES];
+        }] forControlEvents:UIControlEventTouchUpInside];
+        [_recentRows addArrangedSubview:all];
+    }
+}
+
+// A row like the System rows, as a button so it can carry a long-press menu.
+- (UIButton *)listRowWithTitle:(NSString *)title subtitle:(NSString *)subtitle symbol:(NSString *)symbol tone:(NSString *)tone
+{
+    UIButton *row = [UIButton buttonWithType:UIButtonTypeCustom];
+    row.translatesAutoresizingMaskIntoConstraints = NO;
+    WQPrismIconTile *icon = [[WQPrismIconTile alloc] initWithSymbol:symbol tone:tone size:30];
+    UILabel *name = [UILabel new], *sub = [UILabel new];
+    UIImageView *chevron = [[UIImageView alloc] initWithImage:[[UIImage systemImageNamed:@"chevron.right"] imageFlippedForRightToLeftLayoutDirection]];
+    name.text = title;
+    name.font = [UIFont preferredFontForTextStyle:UIFontTextStyleSubheadline];
+    name.textColor = UIColor.labelColor;
+    sub.text = subtitle;
+    sub.font = [UIFont preferredFontForTextStyle:UIFontTextStyleCaption2];
+    sub.textColor = UIColor.secondaryLabelColor;
+    sub.lineBreakMode = NSLineBreakByTruncatingMiddle;
+    chevron.tintColor = UIColor.tertiaryLabelColor;
+    for (UIView *view in @[icon, name, sub, chevron]) {
+        view.translatesAutoresizingMaskIntoConstraints = NO;
+        view.userInteractionEnabled = NO;
+        [row addSubview:view];
+    }
+    [NSLayoutConstraint activateConstraints:@[
+        [row.heightAnchor constraintEqualToConstant:54],
+        [icon.leadingAnchor constraintEqualToAnchor:row.leadingAnchor],
+        [icon.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
+        [name.topAnchor constraintEqualToAnchor:row.topAnchor constant:7],
+        [name.leadingAnchor constraintEqualToAnchor:icon.trailingAnchor constant:9],
+        [name.trailingAnchor constraintEqualToAnchor:chevron.leadingAnchor constant:-8],
+        [sub.topAnchor constraintEqualToAnchor:name.bottomAnchor constant:1],
+        [sub.leadingAnchor constraintEqualToAnchor:name.leadingAnchor],
+        [sub.trailingAnchor constraintEqualToAnchor:name.trailingAnchor],
+        [chevron.trailingAnchor constraintEqualToAnchor:row.trailingAnchor constant:-6],
+        [chevron.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
+        [chevron.widthAnchor constraintEqualToConstant:11],
+        [chevron.heightAnchor constraintEqualToConstant:11],
+    ]];
+    return row;
 }
 
 - (void)buildSystemSection
@@ -5792,7 +6168,7 @@ static NSString *const kWQTroubleshootingFooter =
     // System Groups is the extra last row, on iOS 27 only.
     if (section == 3) return 1;
     if (section == 2) return 8;   // row 7: Sharing Password
-    return section == 0 ? (NSInteger)_locations.count + (wq_system_areas_reachable() ? 1 : 0) : 8;
+    return section == 0 ? (NSInteger)_locations.count + (wq_system_areas_reachable() ? 1 : 0) : 9;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
@@ -5888,7 +6264,8 @@ static NSString *const kWQTroubleshootingFooter =
     } else {
         NSArray *tools = @[@[@"Apps", @"square.grid.3x3"], @[@"Cache Cleaner", @"trash"], @[@"Go to Path…", @"arrow.right.circle"],
                            @[@"App Backups", @"clock.arrow.circlepath"], @[@"Backups", @"clock.arrow.circlepath"],
-                           @[@"Recently Deleted", @"trash.circle"], @[@"Log", @"doc.plaintext"], @[@"Favorites", @"star"]];
+                           @[@"Recently Deleted", @"trash.circle"], @[@"Log", @"doc.plaintext"], @[@"Favorites", @"star"],
+                           @[@"Recent", @"clock"]];
         c.text = WQLocalizedNullable(tools[(NSUInteger)indexPath.row][0]);
         c.image = [UIImage systemImageNamed:tools[(NSUInteger)indexPath.row][1]];
     }
@@ -5938,6 +6315,8 @@ static NSString *const kWQTroubleshootingFooter =
         next = [WQRecentlyDeletedViewController new];
     } else if (indexPath.row == 7) {
         next = [WQFavoritesViewController new];
+    } else if (indexPath.row == 8) {
+        next = [WQRecentsViewController new];
     } else {
         next = [WQLogViewController new];
     }

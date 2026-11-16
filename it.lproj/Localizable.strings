@@ -1025,3 +1025,9 @@
 "Use Random Password" = "Usa password casuale";
 "The password could not be saved in the keychain." = "Impossibile salvare la password nel portachiavi.";
 "Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Password di condivisione: una password fissa per la condivisione Wi-Fi invece di una nuova casuale ogni volta. È conservata nel portachiavi.";
+"Recent" = "Recenti";
+"Show All" = "Mostra tutto";
+"Clear" = "Cancella";
+"Clear Recent" = "Cancella recenti";
+"Remove from Recent" = "Rimuovi dai recenti";
+"Folders and files you open show up here." = "Le cartelle e i file che apri compaiono qui.";

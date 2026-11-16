@@ -1029,3 +1029,9 @@
 "Use Random Password" = "무작위 암호 사용";
 "The password could not be saved in the keychain." = "암호를 키체인에 저장할 수 없습니다.";
 "Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "공유 암호: 매번 새 무작위 암호 대신 Wi-Fi 공유에 쓸 고정 암호입니다. 키체인에 보관됩니다.";
+"Recent" = "최근 항목";
+"Show All" = "모두 보기";
+"Clear" = "지우기";
+"Clear Recent" = "최근 항목 지우기";
+"Remove from Recent" = "최근 항목에서 제거";
+"Folders and files you open show up here." = "연 폴더와 파일이 여기에 표시됩니다.";

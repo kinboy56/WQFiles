@@ -1029,3 +1029,9 @@
 "Use Random Password" = "Rastgele Parola Kullan";
 "The password could not be saved in the keychain." = "Parola anahtar zincirine kaydedilemedi.";
 "Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Paylaşım Parolası: Wi-Fi Paylaşımı için her seferinde yeni rastgele bir parola yerine sabit bir parola. Anahtar zincirinde saklanır.";
+"Recent" = "Son Kullanılanlar";
+"Show All" = "Tümünü Göster";
+"Clear" = "Temizle";
+"Clear Recent" = "Son Kullanılanları Temizle";
+"Remove from Recent" = "Son Kullanılanlardan Kaldır";
+"Folders and files you open show up here." = "Açtığınız klasörler ve dosyalar burada görünür.";

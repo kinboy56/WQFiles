@@ -1029,3 +1029,9 @@
 "Use Random Password" = "Use Random Password";
 "The password could not be saved in the keychain." = "The password could not be saved in the keychain.";
 "Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain.";
+"Recent" = "Recent";
+"Show All" = "Show All";
+"Clear" = "Clear";
+"Clear Recent" = "Clear Recent";
+"Remove from Recent" = "Remove from Recent";
+"Folders and files you open show up here." = "Folders and files you open show up here.";

@@ -1025,3 +1025,9 @@
 "Use Random Password" = "Zufälliges Passwort verwenden";
 "The password could not be saved in the keychain." = "Das Passwort konnte nicht im Schlüsselbund gespeichert werden.";
 "Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Freigabe-Passwort: ein festes Passwort für die WLAN-Freigabe statt jedes Mal eines neuen zufälligen. Es wird im Schlüsselbund gespeichert.";
+"Recent" = "Zuletzt verwendet";
+"Show All" = "Alle anzeigen";
+"Clear" = "Löschen";
+"Clear Recent" = "Verlauf löschen";
+"Remove from Recent" = "Aus „Zuletzt verwendet“ entfernen";
+"Folders and files you open show up here." = "Ordner und Dateien, die du öffnest, erscheinen hier.";

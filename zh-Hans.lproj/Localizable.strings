@@ -1029,3 +1029,9 @@
 "Use Random Password" = "使用随机密码";
 "The password could not be saved in the keychain." = "无法将密码保存到钥匙串。";
 "Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "共享密码：Wi-Fi 共享使用固定密码，而不是每次生成新的随机密码。密码保存在钥匙串中。";
+"Recent" = "最近";
+"Show All" = "显示全部";
+"Clear" = "清除";
+"Clear Recent" = "清除最近项目";
+"Remove from Recent" = "从最近项目中移除";
+"Folders and files you open show up here." = "你打开的文件夹和文件会显示在这里。";
