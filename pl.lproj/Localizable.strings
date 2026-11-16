@@ -1059,3 +1059,5 @@
 "Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "Stuknij motyw, aby go użyć. Przytrzymaj lub przesuń motyw, aby go udostępnić lub usunąć zaimportowany. Motywy kolorują też stronę udostępniania Wi-Fi.";
 "Colored Cards" = "Kolorowe karty";
 "Colored Cards: the cards on the start screen take on the color of their icon." = "Kolorowe karty: karty na ekranie startowym przyjmują kolor swojej ikony.";
+"Show Folder Sizes" = "Pokazuj rozmiar folderów";
+"Show Folder Sizes: shows how much space each folder takes, measured in the background with the folders on screen first. Every file below each folder is read for this, so large folders and App Data take a while. Sizes are kept for ten minutes; pull down to measure again." = "Pokazuj rozmiar folderów: pokazuje, ile miejsca zajmuje każdy folder, mierzone w tle, najpierw foldery widoczne na ekranie. Odczytywany jest przy tym każdy plik w każdym folderze, więc duże foldery i Dane aplikacji wymagają chwili. Rozmiary są pamiętane przez dziesięć minut; przeciągnij w dół, aby zmierzyć ponownie.";

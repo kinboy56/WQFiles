@@ -155,6 +155,10 @@ new files.
 - **Show Item Counts** (Settings, off by default): folders show how many
   items they hold. Every subfolder is listed for this, which slows down
   folders with many subfolders.
+- **Show Folder Sizes** (Settings, off by default): folders, App Data included,
+  show how much space they take, measured in the background with the rows on
+  screen first. Sizes are kept for ten minutes; pull down to measure again.
+  Sorting by size uses them once every folder is measured.
 - **Keep Data Before Restore** (Settings, on by default): restoring an app
   backup or a file backup first backs up what's there now, so a failed restore
   can be undone. Turn it off to delete that backup once the restore succeeded.

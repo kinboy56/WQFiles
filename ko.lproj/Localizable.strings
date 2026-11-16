@@ -1059,3 +1059,5 @@
 "Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "테마를 탭하면 사용합니다. 테마를 길게 누르거나 쓸어서 공유하거나, 가져온 테마를 삭제하세요. 테마는 Wi-Fi 공유 페이지에도 적용됩니다.";
 "Colored Cards" = "색상 카드";
 "Colored Cards: the cards on the start screen take on the color of their icon." = "색상 카드: 시작 화면의 카드가 아이콘 색상을 띱니다.";
+"Show Folder Sizes" = "폴더 크기 보기";
+"Show Folder Sizes: shows how much space each folder takes, measured in the background with the folders on screen first. Every file below each folder is read for this, so large folders and App Data take a while. Sizes are kept for ten minutes; pull down to measure again." = "폴더 크기 보기: 각 폴더가 차지하는 공간을 보여 줍니다. 화면에 보이는 폴더부터 백그라운드에서 측정합니다. 각 폴더 안의 모든 파일을 읽어야 하므로 큰 폴더와 앱 데이터는 시간이 걸립니다. 크기는 10분 동안 유지되며, 아래로 당기면 다시 측정합니다.";

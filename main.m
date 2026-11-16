@@ -72,6 +72,10 @@ static BOOL wq_regular_file_for_ui(NSString *path)
 @property (nonatomic, strong) NSDate *modified;
 @property (nonatomic, strong) NSDate *created;
 @property (nonatomic) NSInteger childCount;   // folders, with Show Item Counts on; -1 unknown
+// Folders, with Show Folder Sizes on: bytes below it, -1 until measured;
+// limited when some of it couldn't be read (shown as "at least").
+@property (nonatomic) long long folderSize;
+@property (nonatomic) BOOL folderSizeLimited;
 // Device, inode and type when listed: delete/rename/move act only on this object.
 @property (nonatomic, copy, nullable) NSDictionary<NSString *, NSNumber *> *identity;
 @end
@@ -79,7 +83,7 @@ static BOOL wq_regular_file_for_ui(NSString *path)
 @implementation WQItem
 - (instancetype)init
 {
-    if ((self = [super init])) _childCount = -1;
+    if ((self = [super init])) { _childCount = -1; _folderSize = -1; }
     return self;
 }
 @end
@@ -96,6 +100,61 @@ static BOOL wq_show_item_counts(void)
 {
     return [NSUserDefaults.standardUserDefaults boolForKey:kWQShowItemCountsPref];
 }
+
+// Settings → Show Folder Sizes (off by default): measures every folder in a
+// list in the background, rows on screen first. Sizes are kept for ten
+// minutes, so going back and forth doesn't measure again.
+static NSString *const kWQShowFolderSizesPref = @"WQShowFolderSizes";
+static const NSTimeInterval kWQFolderSizeMaxAge = 600;
+static NSString *const kWQFolderSizesFooter = @"Show Folder Sizes: shows how much space each folder takes, measured in the background with the folders on screen first. Every file below each folder is read for this, so large folders and App Data take a while. Sizes are kept for ten minutes; pull down to measure again.";
+static BOOL wq_show_folder_sizes(void)
+{
+    return [NSUserDefaults.standardUserDefaults boolForKey:kWQShowFolderSizesPref];
+}
+static NSMutableDictionary<NSString *, NSArray *> *wq_folder_size_cache(void)
+{
+    static NSMutableDictionary *cache;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ cache = [NSMutableDictionary new]; });
+    return cache;
+}
+static BOOL wq_folder_size_cached(NSString *path, unsigned long long *bytes, BOOL *limited)
+{
+    NSMutableDictionary *cache = wq_folder_size_cache();
+    @synchronized (cache) {
+        NSArray *entry = cache[path];
+        if (!entry || NSDate.date.timeIntervalSinceReferenceDate - [entry[2] doubleValue] > kWQFolderSizeMaxAge) return NO;
+        *bytes = [entry[0] unsignedLongLongValue];
+        *limited = [entry[1] boolValue];
+        return YES;
+    }
+}
+static void wq_folder_size_store(NSString *path, unsigned long long bytes, BOOL limited)
+{
+    NSMutableDictionary *cache = wq_folder_size_cache();
+    @synchronized (cache) {
+        if (cache.count > 5000) [cache removeAllObjects];
+        cache[path] = @[@(bytes), @(limited), @(NSDate.date.timeIntervalSinceReferenceDate)];
+    }
+}
+// A folder's contents changed here (delete, move, save): its size and its
+// parents' sizes are measured again next time.
+static void wq_folder_size_forget(NSString *path)
+{
+    NSMutableDictionary *cache = wq_folder_size_cache();
+    @synchronized (cache) {
+        for (NSString *key in cache.allKeys)
+            if ([path isEqualToString:key] || [path hasPrefix:[key stringByAppendingString:@"/"]] ||
+                [key hasPrefix:[path stringByAppendingString:@"/"]]) [cache removeObjectForKey:key];
+    }
+}
+
+// Rows on screen, read by the size measuring queue to measure those first.
+@interface WQVisibleFolders : NSObject
+@property (atomic, copy) NSSet<NSString *> *paths;
+@end
+@implementation WQVisibleFolders
+@end
 
 #pragma mark - File viewer
 
@@ -822,7 +881,13 @@ static NSArray<WQItem *> *wq_sorted_items(NSArray<WQItem *> *items)
             case WQSortName: break;
             case WQSortModified: r = [(a.modified ?: NSDate.distantPast) compare:(b.modified ?: NSDate.distantPast)]; break;
             case WQSortCreated: r = [(a.created ?: NSDate.distantPast) compare:(b.created ?: NSDate.distantPast)]; break;
-            case WQSortSize: r = a.size < b.size ? NSOrderedAscending : a.size > b.size ? NSOrderedDescending : NSOrderedSame; break;
+            case WQSortSize: {
+                // Folders by their measured size (Show Folder Sizes), else 0.
+                unsigned long long sa = a.isDir ? (unsigned long long)MAX(0LL, a.folderSize) : a.size;
+                unsigned long long sb = b.isDir ? (unsigned long long)MAX(0LL, b.folderSize) : b.size;
+                r = sa < sb ? NSOrderedAscending : sa > sb ? NSOrderedDescending : NSOrderedSame;
+                break;
+            }
         }
         NSComparisonResult byName = [(a.label ?: a.name ?: @"") localizedStandardCompare:(b.label ?: b.name ?: @"")];
         if (key == WQSortName) r = byName;
@@ -1411,6 +1476,9 @@ static NSString *wq_info_date(struct timespec ts)
     UIBarButtonItem *_fileSelectItem;
     UIBarButtonItem *_fileDoneItem;
     UIBarButtonItem *_fileAllItem;
+    WQScanCancellation *_sizeCancellation;   // Show Folder Sizes
+    WQVisibleFolders *_visibleFolders;
+    BOOL _reloadKeepsSizes;                  // opening or returning: cached sizes stay
 }
 
 - (instancetype)initWithPath:(NSString *)path title:(NSString *)title
@@ -1557,12 +1625,17 @@ static NSString *wq_info_date(struct timespec ts)
     self.navigationItem.searchController = search;
     self.navigationItem.hidesSearchBarWhenScrolling = NO;
     self.definesPresentationContext = YES;
+    _reloadKeepsSizes = YES;
     [self reload];
 }
 
 - (void)viewDidAppear:(BOOL)animated
 {
     [super viewDidAppear:animated];
+    // Folder sizes stopped while another screen was in front: carry on
+    // (sizes already measured come from the cache).
+    if (!_scanInFlight && _all && (!_sizeCancellation || _sizeCancellation.isCancelled))
+        [self measureFolderSizesOf:_all generation:_scanGeneration];
     // Recent: once per screen, so going back up doesn't reorder the list.
     if (!_recordedRecent) {
         _recordedRecent = YES;
@@ -1580,7 +1653,10 @@ static NSString *wq_info_date(struct timespec ts)
     [self updateToolbar];
     if (_scanInFlight) return;
     NSTimeInterval age = NSDate.date.timeIntervalSinceReferenceDate - _lastReloadFinished;
-    if (_scanNeedsRefresh || _lastReloadFinished <= 0 || age > 2.0) [self reload];
+    if (_scanNeedsRefresh || _lastReloadFinished <= 0 || age > 2.0) {
+        _reloadKeepsSizes = YES;
+        [self reload];
+    }
 }
 
 - (void)viewWillDisappear:(BOOL)animated
@@ -1598,6 +1674,9 @@ static NSString *wq_info_date(struct timespec ts)
     if (!self.presentedViewController && self.navigationController.topViewController != self) {
         wq_share_cancel(self);
     }
+    // Folder sizes share one queue: the folder in front measures, not this
+    // one. Measured sizes are kept; the rest resume when it's back.
+    [_sizeCancellation cancel];
 }
 
 // Wi-Fi sharing of this folder. Container roots (App Data and so on) can't be
@@ -2348,6 +2427,11 @@ static NSString *wq_info_date(struct timespec ts)
 
 - (void)reload
 {
+    // Any other reload follows a change here (delete, move, save, extract) or
+    // pull to refresh: sizes below this folder are measured again.
+    if (!_reloadKeepsSizes) wq_folder_size_forget(_path);
+    _reloadKeepsSizes = NO;
+    [_sizeCancellation cancel];
     [_scanCancellation cancel];
     WQScanCancellation *cancellation = [WQScanCancellation new];
     _scanCancellation = cancellation;
@@ -2534,6 +2618,7 @@ static NSString *wq_info_date(struct timespec ts)
             self->_allEnumerated = haveFullPaths;
             [self applyFilter];
             [self countChildrenOf:items generation:generation cancellation:cancellation];
+            [self measureFolderSizesOf:items generation:generation];
             self->_error = (names || childPaths != nil) ? nil
                 : (error.length ? error
                    : !wq_app_group() ? WQLocalized(@"WQ Files has no App Group, so it can't open other apps' folders. Re-sign it with a tool that keeps the App Group (see Signing in the README).")
@@ -2592,6 +2677,95 @@ static NSString *wq_info_date(struct timespec ts)
     });
 }
 
+// Show Folder Sizes: measure each subfolder in the background, rows on
+// screen first; visible rows update as sizes arrive. Container lists (App
+// Data and the like) too: that's where sizes help most. Sorting by size
+// re-sorts once, when every folder is measured.
+- (void)measureFolderSizesOf:(NSArray<WQItem *> *)items generation:(NSUInteger)generation
+{
+    [_sizeCancellation cancel];
+    _sizeCancellation = nil;
+    if (!wq_show_folder_sizes() || _error) return;
+    NSMutableArray<WQItem *> *todo = [NSMutableArray new];
+    BOOL anyCached = NO;
+    for (WQItem *item in items) {
+        if (!item.isDir || item.isLink || item.unreadable) continue;
+        unsigned long long bytes = 0;
+        BOOL limited = NO;
+        if (wq_folder_size_cached(item.path, &bytes, &limited)) {
+            item.folderSize = (long long)bytes;
+            item.folderSizeLimited = limited;
+            anyCached = YES;
+        } else [todo addObject:item];
+    }
+    if (anyCached && wq_sort_key() == WQSortSize) [self applyFilter];
+    if (!todo.count) return;
+    WQScanCancellation *cancellation = [WQScanCancellation new];
+    _sizeCancellation = cancellation;
+    if (!_visibleFolders) _visibleFolders = [WQVisibleFolders new];
+    WQVisibleFolders *visible = _visibleFolders;
+    [self noteVisibleFolders];
+    static dispatch_queue_t queue;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        // User-initiated: a utility queue throttles disk reads (see 0.9.13).
+        queue = dispatch_queue_create("wq.folder-sizes", dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_USER_INITIATED, 0));
+    });
+    __weak typeof(self) weakSelf = self;
+    void (^refresh)(BOOL) = ^(BOOL last) {
+        WQDirViewController *strongSelf = weakSelf;
+        if (!strongSelf || generation != strongSelf->_scanGeneration || strongSelf->_error) return;
+        if (last && wq_sort_key() == WQSortSize) { [strongSelf applyFilter]; return; }
+        NSArray *rows = strongSelf.tableView.indexPathsForVisibleRows;
+        if (rows.count) [strongSelf.tableView reconfigureRowsAtIndexPaths:rows];
+    };
+    dispatch_async(queue, ^{
+        NSMutableArray<WQItem *> *left = [todo mutableCopy];
+        CFAbsoluteTime lastRefresh = CFAbsoluteTimeGetCurrent();
+        while (left.count) {
+            // Paused in the background like the other scans.
+            if (!wq_scan_wait(cancellation)) return;
+            NSSet<NSString *> *onScreen = visible.paths;
+            NSUInteger pick = onScreen.count ? [left indexOfObjectPassingTest:^BOOL(WQItem *item, NSUInteger __unused i, BOOL *__unused stop) {
+                return [onScreen containsObject:item.path];
+            }] : NSNotFound;
+            WQItem *item = left[pick == NSNotFound ? 0 : pick];
+            [left removeObjectAtIndex:pick == NSNotFound ? 0 : pick];
+            unsigned long long bytes = 0;
+            WQMeasureResult result = wq_measure_tree(item.path, cancellation, &bytes);
+            if (result == WQMeasureResultCancelled || cancellation.isCancelled) return;
+            if (result == WQMeasureResultMissing) continue;
+            BOOL limited = result != WQMeasureResultKnown;
+            wq_folder_size_store(item.path, bytes, limited);
+            dispatch_async(dispatch_get_main_queue(), ^{
+                item.folderSize = (long long)bytes;
+                item.folderSizeLimited = limited;
+            });
+            if (CFAbsoluteTimeGetCurrent() - lastRefresh > 0.3) {
+                lastRefresh = CFAbsoluteTimeGetCurrent();
+                dispatch_async(dispatch_get_main_queue(), ^{ refresh(NO); });
+            }
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{ refresh(YES); });
+    });
+}
+
+- (void)noteVisibleFolders
+{
+    if (!_visibleFolders) return;
+    NSMutableSet *paths = [NSMutableSet new];
+    for (NSIndexPath *indexPath in self.tableView.indexPathsForVisibleRows)
+        if ((NSUInteger)indexPath.row < _items.count) [paths addObject:_items[(NSUInteger)indexPath.row].path];
+    _visibleFolders.paths = paths;
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *__unused)scrollView { [self noteVisibleFolders]; }
+- (void)scrollViewDidEndDragging:(UIScrollView *__unused)scrollView willDecelerate:(BOOL)decelerate
+{
+    if (!decelerate) [self noteVisibleFolders];
+}
+- (void)scrollViewDidScrollToTop:(UIScrollView *__unused)scrollView { [self noteVisibleFolders]; }
+
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
     return _error ? 1 : (NSInteger)_items.count;
@@ -2624,6 +2798,13 @@ static NSString *wq_info_date(struct timespec ts)
             ? WQLocalizedFormat(@"%ld item", (long)item.childCount)
             : WQLocalizedFormat(@"%ld items", (long)item.childCount);
         detail = WQLocalizedFormat(@"%@ · %@", date, items);
+    }
+    // Show Folder Sizes: in front, like a file's size; "≥" when part of the
+    // folder couldn't be read.
+    if (item.isDir && item.folderSize >= 0 && wq_show_folder_sizes()) {
+        NSString *size = wq_size_text((unsigned long long)item.folderSize);
+        if (item.folderSizeLimited) size = [@"≥ " stringByAppendingString:size];
+        detail = WQLocalizedFormat(@"%@ · %@", size, detail);
     }
     // Container lists: the bundle id (issue #27); the folder's UUID is in its path.
     if (item.label) detail = WQLocalizedFormat(@"%@\n%@", item.bundleID.length ? item.bundleID : item.name, detail);
@@ -5602,7 +5783,7 @@ static NSString *const kWQTroubleshootingFooter =
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
     // Rows 7 and 8: Background Color, and Default Colors once one is picked.
-    return section == 0 ? 7 : section == 1 ? 4 : 1;   // row 6: Theme
+    return section == 0 ? 8 : section == 1 ? 4 : 1;   // row 6: Show Folder Sizes, row 7: Theme
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
@@ -5615,11 +5796,12 @@ static NSString *const kWQTroubleshootingFooter =
     if (section == 2) return WQLocalized(kWQTroubleshootingFooter);
     if (section == 1) return WQLocalized(@"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain.");
     if (section != 0) return nil;
-    return [NSString stringWithFormat:@"%@\n\n%@\n\n%@\n\n%@",
+    return [NSString stringWithFormat:@"%@\n\n%@\n\n%@\n\n%@\n\n%@",
             WQLocalized(@"Allow Deleting: when off, nothing can be deleted: no Delete or swipe to delete in folders and backups, no Clear Data in Apps and no cleaning in the Cache Cleaner. Saving, moving and restoring still work.\n\nShow Item Counts: shows how many items each folder holds. Every subfolder has to be listed for this, which slows down folders with many subfolders, especially in other apps' data."),
             WQLocalized(@"Keep Data Before Restore: restoring an app or file backup first backs up what's there now, so a failed restore can be undone. When off, that backup is deleted once the restore succeeded."),
             WQLocalized(@"Reopen Last Folder: WQ Files starts in the folder you were in. Check for Updates: twice a day WQ Files reads the public release list on GitHub and shows a note when a new version is out; nothing about your device is sent."),
-            WQLocalized(@"Theme: the colors of the new design: the built-in ones, a color you pick, or themes you import.")];
+            WQLocalized(@"Theme: the colors of the new design: the built-in ones, a color you pick, or themes you import."),
+            WQLocalized(kWQFolderSizesFooter)];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -5630,7 +5812,7 @@ static NSString *const kWQTroubleshootingFooter =
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
     UIListContentConfiguration *c = [UIListContentConfiguration subtitleCellConfiguration];
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-    if (indexPath.section == 0 && indexPath.row == 6) {
+    if (indexPath.section == 0 && indexPath.row == 7) {
         UIListContentConfiguration *v = [UIListContentConfiguration valueCellConfiguration];
         v.text = WQLocalizedNullable(@"Theme");
         v.image = [UIImage systemImageNamed:@"paintpalette"];
@@ -5643,8 +5825,8 @@ static NSString *const kWQTroubleshootingFooter =
         return cell;
     }
     if (indexPath.section == 0) {
-        NSArray<NSString *> *titles = @[@"Allow Deleting", @"Show Item Counts", @"Keep Data Before Restore", @"Reopen Last Folder", @"Check for Updates", @"New Design"];
-        NSArray<NSString *> *symbols = @[@"trash.slash", @"number", @"clock.arrow.circlepath", @"arrow.uturn.forward", @"arrow.down.circle", @"paintbrush"];
+        NSArray<NSString *> *titles = @[@"Allow Deleting", @"Show Item Counts", @"Keep Data Before Restore", @"Reopen Last Folder", @"Check for Updates", @"New Design", @"Show Folder Sizes"];
+        NSArray<NSString *> *symbols = @[@"trash.slash", @"number", @"clock.arrow.circlepath", @"arrow.uturn.forward", @"arrow.down.circle", @"paintbrush", @"externaldrive"];
         c.text = WQLocalizedNullable(titles[(NSUInteger)indexPath.row]);
         c.image = [UIImage systemImageNamed:symbols[(NSUInteger)indexPath.row]];
         UISwitch *toggle = [UISwitch new];
@@ -5653,10 +5835,12 @@ static NSString *const kWQTroubleshootingFooter =
                    : indexPath.row == 3 ? ![defaults boolForKey:kWQReopenOffPref]
                    : indexPath.row == 4 ? ![defaults boolForKey:kWQUpdateCheckOffPref]
                    : indexPath.row == 5 ? wq_prism_enabled()
+                   : indexPath.row == 6 ? wq_show_folder_sizes()
                    : wq_deleting_allowed();
         [toggle addAction:[UIAction actionWithHandler:^(UIAction *action) {
             BOOL on = ((UISwitch *)action.sender).isOn;
             if (indexPath.row == 1) [defaults setBool:on forKey:kWQShowItemCountsPref];
+            else if (indexPath.row == 6) [defaults setBool:on forKey:kWQShowFolderSizesPref];
             else if (indexPath.row == 2) wq_set_keep_before_restore(on);
             else if (indexPath.row == 3) {
                 [defaults setBool:!on forKey:kWQReopenOffPref];
@@ -5696,7 +5880,7 @@ static NSString *const kWQTroubleshootingFooter =
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
-    if (indexPath.section == 0 && indexPath.row == 6) {
+    if (indexPath.section == 0 && indexPath.row == 7) {
         [self.navigationController pushViewController:wq_theme_settings_controller() animated:YES];
         return;
     }
@@ -6163,7 +6347,7 @@ static NSString *const kWQTroubleshootingFooter =
 {
     // System Groups is the extra last row, on iOS 27 only.
     if (section == 3) return 1;
-    if (section == 2) return 8;   // row 7: Sharing Password
+    if (section == 2) return 9;   // row 7: Sharing Password, row 8: Show Folder Sizes
     return section == 0 ? (NSInteger)_locations.count + (wq_system_areas_reachable() ? 1 : 0) : 9;
 }
 
@@ -6182,8 +6366,9 @@ static NSString *const kWQTroubleshootingFooter =
         return [NSString stringWithFormat:@"%@\n\n%@",
                 WQLocalized(@"Allow Deleting: when off, nothing can be deleted: no Delete or swipe to delete in folders and backups, no Clear Data in Apps and no cleaning in the Cache Cleaner. Saving, moving and restoring still work.\n\nShow Item Counts: shows how many items each folder holds. Every subfolder has to be listed for this, which slows down folders with many subfolders, especially in other apps' data."),
                 [NSString stringWithFormat:@"%@\n\n%@", WQLocalized(@"Keep Data Before Restore: restoring an app or file backup first backs up what's there now, so a failed restore can be undone. When off, that backup is deleted once the restore succeeded."),
-                 [NSString stringWithFormat:@"%@\n\n%@", WQLocalized(@"Reopen Last Folder: WQ Files starts in the folder you were in. Check for Updates: twice a day WQ Files reads the public release list on GitHub and shows a note when a new version is out; nothing about your device is sent."),
-                  WQLocalized(@"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain.")]]];
+                 [NSString stringWithFormat:@"%@\n\n%@\n\n%@", WQLocalized(@"Reopen Last Folder: WQ Files starts in the folder you were in. Check for Updates: twice a day WQ Files reads the public release list on GitHub and shows a note when a new version is out; nothing about your device is sent."),
+                  WQLocalized(@"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain."),
+                  WQLocalized(kWQFolderSizesFooter)]]];
     return section == 1
         ? WQLocalized(@"Overwritten and deleted files are copied to Backups first (also visible in the Files app). Long-press a backup to restore it.")
         : nil;
@@ -6224,19 +6409,21 @@ static NSString *const kWQTroubleshootingFooter =
     if (indexPath.section == 2) {
         cell.accessoryType = UITableViewCellAccessoryNone;
         NSInteger row = indexPath.row;
-        // Rows 0-2 and 4-6 are switches; row 3 is Language (above).
-        NSUInteger index = (NSUInteger)(row > 3 ? row - 1 : row);
-        c.text = WQLocalized(@[@"Allow Deleting", @"Show Item Counts", @"Keep Data Before Restore", @"Reopen Last Folder", @"Check for Updates", @"New Design"][index]);
-        c.image = [UIImage systemImageNamed:@[@"trash.slash", @"number", @"clock.arrow.circlepath", @"arrow.uturn.forward", @"arrow.down.circle", @"paintbrush"][index]];
+        // Rows 0-2, 4-6 and 8 are switches; row 3 is Language, row 7 Sharing Password (above).
+        NSUInteger index = (NSUInteger)(row == 8 ? 6 : row > 3 ? row - 1 : row);
+        c.text = WQLocalized(@[@"Allow Deleting", @"Show Item Counts", @"Keep Data Before Restore", @"Reopen Last Folder", @"Check for Updates", @"New Design", @"Show Folder Sizes"][index]);
+        c.image = [UIImage systemImageNamed:@[@"trash.slash", @"number", @"clock.arrow.circlepath", @"arrow.uturn.forward", @"arrow.down.circle", @"paintbrush", @"externaldrive"][index]];
         NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
         UISwitch *toggle = [UISwitch new];
         toggle.on = row == 1 ? wq_show_item_counts() : row == 2 ? wq_keep_before_restore()
                   : row == 4 ? ![defaults boolForKey:kWQReopenOffPref] : row == 5 ? ![defaults boolForKey:kWQUpdateCheckOffPref]
                   : row == 6 ? wq_prism_enabled()
+                  : row == 8 ? wq_show_folder_sizes()
                   : wq_deleting_allowed();
         [toggle addAction:[UIAction actionWithHandler:^(UIAction *action) {
             BOOL on = ((UISwitch *)action.sender).isOn;
             if (row == 1) [defaults setBool:on forKey:kWQShowItemCountsPref];
+            else if (row == 8) [defaults setBool:on forKey:kWQShowFolderSizesPref];
             else if (row == 2) wq_set_keep_before_restore(on);
             else if (row == 4) { [defaults setBool:!on forKey:kWQReopenOffPref]; if (!on) [defaults removeObjectForKey:kWQLastFolderPref]; }
             else if (row == 5) [defaults setBool:!on forKey:kWQUpdateCheckOffPref];

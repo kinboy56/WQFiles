@@ -1059,3 +1059,5 @@
 "Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "Chạm vào một chủ đề để dùng. Nhấn giữ hoặc vuốt chủ đề để chia sẻ, hoặc để xóa chủ đề đã nhập. Chủ đề cũng tô màu trang Chia sẻ Wi-Fi.";
 "Colored Cards" = "Thẻ có màu";
 "Colored Cards: the cards on the start screen take on the color of their icon." = "Thẻ có màu: các thẻ trên màn hình bắt đầu mang màu của biểu tượng.";
+"Show Folder Sizes" = "Hiện dung lượng thư mục";
+"Show Folder Sizes: shows how much space each folder takes, measured in the background with the folders on screen first. Every file below each folder is read for this, so large folders and App Data take a while. Sizes are kept for ten minutes; pull down to measure again." = "Hiện dung lượng thư mục: hiện dung lượng mỗi thư mục chiếm, được đo ở chế độ nền, ưu tiên các thư mục đang hiển thị. Việc này phải đọc mọi tệp trong từng thư mục nên thư mục lớn và Dữ liệu ứng dụng sẽ mất một lúc. Dung lượng được giữ trong mười phút; kéo xuống để đo lại.";
