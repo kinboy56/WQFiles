@@ -1249,6 +1249,7 @@ static NSString *wq_info_date(struct timespec ts)
 @implementation WQDirViewController {
     NSString *_path;
     NSArray<WQItem *> *_all;     // everything in the folder
+    BOOL _allEnumerated;         // _all came from container enumeration (the folder itself can't be listed)
     NSArray<WQItem *> *_items;   // what the search lets through (shown)
     NSString *_query;
     UILabel *_pathLabel;
@@ -1470,8 +1471,10 @@ static NSString *wq_info_date(struct timespec ts)
 // listed directly; the server gets the containers this screen found instead.
 - (void)shareOnWiFi
 {
+    // Never list here: on a container root that goes through the sandbox
+    // access path and can take long enough to freeze the screen.
     NSArray<WQWebEntry *> *entries = nil;
-    if (!wq_list(_path, NULL)) {
+    if (_allEnumerated) {
         NSMutableArray<WQWebEntry *> *list = [NSMutableArray new];
         for (WQItem *item in _all) {
             WQWebEntry *entry = [WQWebEntry new];
@@ -2395,6 +2398,7 @@ static NSString *wq_info_date(struct timespec ts)
                 return;
             }
             self->_all = items;
+            self->_allEnumerated = haveFullPaths;
             [self applyFilter];
             [self countChildrenOf:items generation:generation cancellation:cancellation];
             self->_error = (names || childPaths != nil) ? nil
