@@ -18,8 +18,14 @@
 
 #pragma mark - Cache cleaner
 
-static NSString *const kCrashLogsPath =
-    @"/private/var/containers/Shared/SystemGroup/systemgroup.com.apple.osanalytics/Library/Logs/CrashReporter";
+// Where iOS keeps crash and diagnostic reports: mobile's Library (the paths
+// in the OS's own code), and the osanalytics system group as a fallback.
+// That folder doesn't exist on iOS 27.0.1, which made Crash Logs "limited".
+static NSArray<NSString *> *WQCacheCrashLogCandidates(void)
+{
+    return @[@"/private/var/mobile/Library/Logs/CrashReporter",
+             @"/private/var/containers/Shared/SystemGroup/systemgroup.com.apple.osanalytics/Library/Logs/CrashReporter"];
+}
 
 @interface WQCacheTargetRecord : NSObject
 @property (nonatomic, copy) NSString *path;
@@ -203,12 +209,15 @@ static BOOL WQCacheRecordIdentityMatches(WQCacheTargetRecord *record, NSString *
     return YES;
 }
 
+// One of the known crash log folders, spelled exactly, with no link on the
+// way and resolving to itself. (Compared without stringByStandardizingPath:
+// that drops "/private" only when it can check the path, so the comparison
+// with realpath's spelling depended on access.)
 static BOOL WQCacheCrashPathIsSafe(NSString *path)
 {
-    NSString *expected = [kCrashLogsPath stringByStandardizingPath];
-    return [[path stringByStandardizingPath] isEqualToString:expected] &&
+    return [WQCacheCrashLogCandidates() containsObject:path] &&
            WQCacheSafetyHasNoSymlinkAncestry(path, YES) &&
-           [WQCacheSafetyCanonicalPath(path) isEqualToString:expected];
+           [WQCacheSafetyCanonicalPath(path) isEqualToString:path];
 }
 
 // Why the crash-log path check failed, for the Log: the first ancestor that
@@ -234,7 +243,7 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
     }
     if (item.crashLogs) {
         BOOL safe = WQCacheCrashPathIsSafe(item.targets.firstObject) ||
-            (wq_grant(kCrashLogsPath) && WQCacheCrashPathIsSafe(item.targets.firstObject));
+            (wq_grant(item.targets.firstObject) && WQCacheCrashPathIsSafe(item.targets.firstObject));
         if (item.targetRecords.count != 1 || !safe) {
             if (reason) *reason = WQLocalized(@"the crash-log target is not the expected canonical directory");
             return NO;
@@ -772,19 +781,28 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
         }
         if (cancellation.isCancelled) return;
         unsigned long long crash = 0;
-        // Crash logs are in a system group, which worse_query reaches on iOS 27
-        // only. On iOS 26 the section is left out instead of reported as limited.
-        BOOL crashReachable = wq_system_areas_reachable();
-        BOOL safeCrashPath = crashReachable && WQCacheCrashPathIsSafe(kCrashLogsPath);
-        // The path check reads every ancestor; inside the system group that
-        // needs the folder's sandbox token first (it used to fail silently,
-        // so Crash Logs always showed as limited).
-        if (crashReachable && !safeCrashPath && wq_grant(kCrashLogsPath))
-            safeCrashPath = WQCacheCrashPathIsSafe(kCrashLogsPath);
+        // The first crash log folder that exists. worse_query reaches these on
+        // iOS 27; where none can be reached (iOS 26) or none exists, the
+        // section is left out instead of reported as limited.
+        NSString *crashPath = nil;
+        BOOL crashBlocked = NO;
+        for (NSString *candidate in WQCacheCrashLogCandidates()) {
+            struct stat cst;
+            if (lstat(candidate.fileSystemRepresentation, &cst) != 0 && (errno == EPERM || errno == EACCES)) wq_grant(candidate);
+            if (lstat(candidate.fileSystemRepresentation, &cst) == 0) { crashPath = candidate; break; }
+            if (errno != ENOENT && errno != ENOTDIR) crashBlocked = YES;
+        }
+        BOOL crashReachable = crashPath != nil;
+        if (!crashPath) wq_log(@"cache scan: no crash log folder %@", crashBlocked ? @"could be reached" : @"exists");
+        BOOL safeCrashPath = crashReachable && WQCacheCrashPathIsSafe(crashPath);
+        // The path check reads every ancestor, which can need the folder's
+        // sandbox token first.
+        if (crashReachable && !safeCrashPath && wq_grant(crashPath))
+            safeCrashPath = WQCacheCrashPathIsSafe(crashPath);
         if (crashReachable && !safeCrashPath)
-            wq_log(@"cache scan: Crash Logs path check failed: %@", WQCacheCrashPathProblem(kCrashLogsPath));
+            wq_log(@"cache scan: Crash Logs path check failed: %@", WQCacheCrashPathProblem(crashPath));
         WQCacheMeasurementState crashState = !crashReachable ? WQCacheMeasurementMissing
-            : safeCrashPath ? WQCacheMeasureDirectory(kCrashLogsPath, taskID, cancellation, &crash)
+            : safeCrashPath ? WQCacheMeasureDirectory(crashPath, taskID, cancellation, &crash)
                             : WQCacheMeasurementLimited;
         if (crashState == WQCacheMeasurementCancelled) return;
         BOOL crashLimited = crashState == WQCacheMeasurementLimited;
@@ -792,12 +810,12 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
         if (crashState == WQCacheMeasurementLimited || crash > 0) {
             WQCacheItem *logs = [WQCacheItem new];
             logs.name = WQLocalized(@"Crash Logs");
-            logs.targets = @[kCrashLogsPath];
+            logs.targets = @[crashPath];
             logs.cacheBytes = crash;
             logs.cacheKnown = crashState != WQCacheMeasurementLimited;
             logs.crashLogs = YES;
             logs.limited = crashState == WQCacheMeasurementLimited;
-            logs.targetRecords = @[WQCacheTargetRecordForPath(kCrashLogsPath, nil)];
+            logs.targetRecords = @[WQCacheTargetRecordForPath(crashPath, nil)];
             logs.selected = !logs.limited;
             [items addObject:logs];
         }
@@ -916,7 +934,7 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
     WQCacheItem *item = self.visibleItems[(NSUInteger)indexPath.row];
     cell.nameLabel.text = item.name;
     if (item.crashLogs) {
-        cell.detailLabel.text = item.cacheKnown ? WQLocalized(@"Crash Logs · osanalytics") : WQLocalized(@"Crash Logs · access limited");
+        cell.detailLabel.text = item.cacheKnown ? WQVerbatim([NSString stringWithFormat:@"%@ · CrashReporter", WQLocalized(@"Crash Logs")]) : WQLocalized(@"Crash Logs · access limited");
     } else {
         NSString *cache = item.cacheKnown ? wq_size_text(item.cacheBytes) : WQLocalized(@"unknown");
         NSString *temp = item.tempKnown ? wq_size_text(item.tempBytes) : WQLocalized(@"unknown");
