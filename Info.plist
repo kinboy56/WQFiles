@@ -70,6 +70,8 @@
 	<true/>
 	<key>MinimumOSVersion</key>
 	<string>26.0</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Wi-Fi Sharing lets browsers on your network open the folder you share.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

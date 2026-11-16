@@ -462,6 +462,52 @@ static UIColor *wq_tinted(UIColor *color, BOOL dark, CGFloat level, CGFloat alph
                 : [UIColor colorWithHue:h saturation:s * level brightness:1.0 alpha:alpha];
 }
 
+@implementation WQPrismPalette
+@end
+
+WQPrismPalette *wq_prism_palette(BOOL dark)
+{
+    WQPrismPalette *p = [WQPrismPalette new];
+    BOOL plain = wq_prism_plain_background();
+    UIColor *custom = wq_prism_background_color();
+    if (plain) {
+        // Plain black (dark) or white (light) like the classic design, or the
+        // picked color kept dark or pale enough for text.
+        UIColor *color = custom ? wq_tinted(custom, dark, dark ? 0.32 : 0.14, 1)
+                                : (dark ? UIColor.blackColor : UIColor.whiteColor);
+        p.baseTop = p.baseBottom = color;
+        p.glows = @[];
+        return p;
+    }
+    if (custom) {
+        // Glows in the picked hue and two neighbours, on a base tinted the same way.
+        CGFloat h = 0, s = 0, v = 0, a = 0;
+        [custom getHue:&h saturation:&s brightness:&v alpha:&a];
+        CGFloat hues[4] = {h, fmod(h + 0.06, 1), fmod(h + 0.94, 1), fmod(h + 0.12, 1)};
+        CGFloat alphas[4] = {dark ? 0.62 : 0.48, dark ? 0.48 : 0.38, dark ? 0.32 : 0.30, 0.24};
+        p.baseTop = wq_tinted(custom, dark, dark ? 0.08 : 0.06, 1);
+        p.baseBottom = wq_tinted(custom, dark, dark ? 0.16 : 0.12, 1);
+        NSMutableArray<UIColor *> *glows = [NSMutableArray new];
+        for (NSUInteger i = 0; i < 4; i++)
+            [glows addObject:dark ? [UIColor colorWithHue:hues[i] saturation:MAX(s, 0.15) * 0.85 brightness:MAX(v, 0.35) * 0.95 alpha:alphas[i]]
+                                  : [UIColor colorWithHue:hues[i] saturation:MAX(s, 0.15) * 0.45 brightness:1.0 alpha:alphas[i]]];
+        p.glows = glows;
+        return p;
+    }
+    if (dark) {
+        p.baseTop = [UIColor colorWithRed:0.024 green:0.033 blue:0.062 alpha:1];
+        p.baseBottom = [UIColor colorWithRed:0.043 green:0.063 blue:0.125 alpha:1];
+        p.glows = @[[UIColor colorWithRed:0.30 green:0.42 blue:0.95 alpha:0.62], [UIColor colorWithRed:0.55 green:0.36 blue:0.95 alpha:0.48],
+                    [UIColor colorWithRed:0.12 green:0.76 blue:0.66 alpha:0.32], [UIColor colorWithRed:0.95 green:0.34 blue:0.60 alpha:0.22]];
+    } else {
+        p.baseTop = [UIColor colorWithRed:0.92 green:0.95 blue:1.0 alpha:1];
+        p.baseBottom = [UIColor colorWithRed:0.86 green:0.91 blue:1.0 alpha:1];
+        p.glows = @[[UIColor colorWithRed:0.56 green:0.69 blue:1.0 alpha:0.48], [UIColor colorWithRed:0.78 green:0.65 blue:1.0 alpha:0.38],
+                    [UIColor colorWithRed:0.52 green:0.92 blue:0.84 alpha:0.30], [UIColor colorWithRed:1.0 green:0.72 blue:0.84 alpha:0.24]];
+    }
+    return p;
+}
+
 // WQ Prism: a soft layered backdrop shared by the redesigned screens.
 @interface WQPrismBackgroundView : UIView
 @end
@@ -500,51 +546,12 @@ static UIColor *wq_tinted(UIColor *color, BOOL dark, CGFloat level, CGFloat alph
 
 - (void)updateColors
 {
-    BOOL plain = wq_prism_plain_background();
-    BOOL dark = self.traitCollection.userInterfaceStyle != UIUserInterfaceStyleLight;
-    UIColor *custom = wq_prism_background_color();
-    for (CAGradientLayer *g in _glows) g.hidden = plain;
-    if (plain && custom) {
-        UIColor *color = wq_tinted(custom, dark, dark ? 0.32 : 0.14, 1);
-        _base.colors = @[(id)color.CGColor, (id)color.CGColor];
-        return;
+    WQPrismPalette *p = wq_prism_palette(self.traitCollection.userInterfaceStyle != UIUserInterfaceStyleLight);
+    for (NSUInteger i = 0; i < _glows.count; i++) {
+        _glows[i].hidden = p.glows.count <= i;
+        if (p.glows.count > i) _glows[i].colors = @[(id)p.glows[i].CGColor, (id)UIColor.clearColor.CGColor];
     }
-    if (custom) {
-        // Glows in the picked hue and two neighbours, on a base tinted the same way.
-        CGFloat h = 0, s = 0, v = 0, a = 0;
-        [custom getHue:&h saturation:&s brightness:&v alpha:&a];
-        CGFloat hues[4] = {h, fmod(h + 0.06, 1), fmod(h + 0.94, 1), fmod(h + 0.12, 1)};
-        CGFloat alphas[4] = {dark ? 0.62 : 0.48, dark ? 0.48 : 0.38, dark ? 0.32 : 0.30, dark ? 0.24 : 0.24};
-        UIColor *top = wq_tinted(custom, dark, dark ? 0.08 : 0.06, 1), *bottom = wq_tinted(custom, dark, dark ? 0.16 : 0.12, 1);
-        _base.colors = @[(id)top.CGColor, (id)bottom.CGColor];
-        for (NSUInteger i = 0; i < 4; i++) {
-            UIColor *glow = dark ? [UIColor colorWithHue:hues[i] saturation:MAX(s, 0.15) * 0.85 brightness:MAX(v, 0.35) * 0.95 alpha:alphas[i]]
-                                 : [UIColor colorWithHue:hues[i] saturation:MAX(s, 0.15) * 0.45 brightness:1.0 alpha:alphas[i]];
-            _glows[i].colors = @[(id)glow.CGColor, (id)[UIColor clearColor].CGColor];
-        }
-        return;
-    }
-    if (plain) {
-        // Plain black (dark) or white (light), like the classic design.
-        UIColor *color = [UIColor.systemBackgroundColor resolvedColorWithTraitCollection:self.traitCollection];
-        _base.colors = @[(id)color.CGColor, (id)color.CGColor];
-        return;
-    }
-    if (dark) {
-        _base.colors = @[(id)[UIColor colorWithRed:0.024 green:0.033 blue:0.062 alpha:1].CGColor,
-                         (id)[UIColor colorWithRed:0.043 green:0.063 blue:0.125 alpha:1].CGColor];
-        _glows[0].colors = @[(id)[UIColor colorWithRed:0.30 green:0.42 blue:0.95 alpha:0.62].CGColor, (id)[UIColor clearColor].CGColor];
-        _glows[1].colors = @[(id)[UIColor colorWithRed:0.55 green:0.36 blue:0.95 alpha:0.48].CGColor, (id)[UIColor clearColor].CGColor];
-        _glows[2].colors = @[(id)[UIColor colorWithRed:0.12 green:0.76 blue:0.66 alpha:0.32].CGColor, (id)[UIColor clearColor].CGColor];
-        _glows[3].colors = @[(id)[UIColor colorWithRed:0.95 green:0.34 blue:0.60 alpha:0.22].CGColor, (id)[UIColor clearColor].CGColor];
-    } else {
-        _base.colors = @[(id)[UIColor colorWithRed:0.92 green:0.95 blue:1.0 alpha:1].CGColor,
-                         (id)[UIColor colorWithRed:0.86 green:0.91 blue:1.0 alpha:1].CGColor];
-        _glows[0].colors = @[(id)[UIColor colorWithRed:0.56 green:0.69 blue:1.0 alpha:0.48].CGColor, (id)[UIColor clearColor].CGColor];
-        _glows[1].colors = @[(id)[UIColor colorWithRed:0.78 green:0.65 blue:1.0 alpha:0.38].CGColor, (id)[UIColor clearColor].CGColor];
-        _glows[2].colors = @[(id)[UIColor colorWithRed:0.52 green:0.92 blue:0.84 alpha:0.30].CGColor, (id)[UIColor clearColor].CGColor];
-        _glows[3].colors = @[(id)[UIColor colorWithRed:1.0 green:0.72 blue:0.84 alpha:0.24].CGColor, (id)[UIColor clearColor].CGColor];
-    }
+    _base.colors = @[(id)p.baseTop.CGColor, (id)p.baseBottom.CGColor];
 }
 
 - (void)layoutSubviews

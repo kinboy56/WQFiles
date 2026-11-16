@@ -55,6 +55,14 @@ void wq_set_prism_plain_background(BOOL plain);
 // whole backdrop) with one picked color; nil restores the default colors.
 UIColor *_Nullable wq_prism_background_color(void);
 void wq_set_prism_background_color(UIColor *_Nullable color);
+// The backdrop's colors for dark or light mode, as the settings ask: a base
+// gradient and up to four glows (none for Plain Background). Shared by the
+// app's backdrop and the Wi-Fi sharing web page.
+@interface WQPrismPalette : NSObject
+@property (nonatomic, strong) UIColor *baseTop, *baseBottom;
+@property (nonatomic, copy) NSArray<UIColor *> *glows;
+@end
+WQPrismPalette *wq_prism_palette(BOOL dark);
 
 
 

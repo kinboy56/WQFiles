@@ -30,6 +30,7 @@
 #import "WQHealth.h"
 #import "WQTrash.h"
 #import "WQArchive.h"
+#import "WQWebServer.h"
 #import "WQSyntax.h"
 #import "WQMediaStream.h"
 #import <AVKit/AVKit.h>
@@ -1330,6 +1331,8 @@ static NSString *wq_info_date(struct timespec ts)
     }
     [menuItems addObject:[UIAction actionWithTitle:WQLocalizedNullable(@"Copy Path") image:[UIImage systemImageNamed:@"doc.on.doc"] identifier:nil
                           handler:^(UIAction *__unused a) { UIPasteboard.generalPasteboard.string = path; }]];
+    [menuItems addObject:[UIAction actionWithTitle:WQLocalizedNullable(@"Share on Wi-Fi…") image:[UIImage systemImageNamed:@"wifi"] identifier:nil
+                          handler:^(UIAction *__unused a) { [weakSelf shareOnWiFi]; }]];
     [menuItems addObject:[UIDeferredMenuElement elementWithUncachedProvider:^(void (^completion)(NSArray<UIMenuElement *> *)) {
         WQDirViewController *folder = weakSelf;
         if (!folder) { completion(@[]); return; }
@@ -1461,6 +1464,24 @@ static NSString *wq_info_date(struct timespec ts)
     if (!self.presentedViewController && self.navigationController.topViewController != self) {
         wq_share_cancel(self);
     }
+}
+
+// Wi-Fi sharing of this folder. Container roots (App Data and so on) can't be
+// listed directly; the server gets the containers this screen found instead.
+- (void)shareOnWiFi
+{
+    NSArray<WQWebEntry *> *entries = nil;
+    if (!wq_list(_path, NULL)) {
+        NSMutableArray<WQWebEntry *> *list = [NSMutableArray new];
+        for (WQItem *item in _all) {
+            WQWebEntry *entry = [WQWebEntry new];
+            entry.path = item.path;
+            entry.label = item.label;
+            [list addObject:entry];
+        }
+        entries = list;
+    }
+    wq_present_wifi_sharing(self, _path, _baseTitle ?: _path.lastPathComponent, entries);
 }
 
 // Device strip, then the full path in normal-size text that wraps at the
