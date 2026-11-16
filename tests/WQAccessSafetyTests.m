@@ -11,6 +11,17 @@ int main(void)
 {
     @autoreleasepool {
         NSFileManager *fm = NSFileManager.defaultManager;
+        check(!WQWorseQueryPatchedBuild(@"24C5037i"), @"27.3 beta 1 not patched");
+        check(WQWorseQueryPatchedBuild(@"24C5049d"), @"27.3 beta 2 patched");
+        check(WQWorseQueryPatchedBuild(@"24C5060a"), @"27.3 later beta patched");
+        check(WQWorseQueryPatchedBuild(@"24C66"), @"27.3 release patched");
+        check(WQWorseQueryPatchedBuild(@"24D5010a"), @"27.4 patched");
+        check(WQWorseQueryPatchedBuild(@"25A5300a"), @"iOS 28 patched");
+        check(!WQWorseQueryPatchedBuild(@"24B85"), @"27.2.1 not patched");
+        check(!WQWorseQueryPatchedBuild(@"24A350"), @"27.0.1 not patched");
+        check(!WQWorseQueryPatchedBuild(@"23H31"), @"iOS 26 not patched");
+        check(!WQWorseQueryPatchedBuild(@""), @"empty build not patched");
+        check(!WQWorseQueryPatchedBuild(@"garbage"), @"garbage build not patched");
         NSString *base = [NSTemporaryDirectory().stringByResolvingSymlinksInPath stringByAppendingPathComponent:
                           [@"WQAccessSafetyTests-" stringByAppendingString:NSUUID.UUID.UUIDString]];
         NSString *library = [base stringByAppendingPathComponent:@"Library"];

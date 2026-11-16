@@ -6644,7 +6644,8 @@ static NSString *const kWQTroubleshootingFooter =
     for (WQHealthCheck *c in _checks)
         if ([c.key isEqualToString:@"Sandbox access"] && c.state == WQHealthFailed) noAccess = YES;
     if (noGroup) return @[@0, @1, @3, @2];
-    return noAccess ? @[@0, @4, @1, @2] : @[@0, @1, @2];
+    // Resetting the access cache can't help where Apple patched worse_query.
+    return noAccess && !wq_worse_query_patched() ? @[@0, @4, @1, @2] : @[@0, @1, @2];
 }
 
 - (void)resetAccessCache

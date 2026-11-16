@@ -3,7 +3,13 @@
 **WQ Files** is a file browser, app data manager and cache cleaner for iOS 26
 and 27. "WQ" stands for worse_query, the sandbox technique it is built on. It
 reaches other apps' and system containers with no jailbreak and no kernel
-exploit. Tested on iOS 26.5 to the 27.3 beta; see [Tested devices](#tested-devices).
+exploit. Tested on iOS 26.5 to 27.3 beta 1; see [Tested devices](#tested-devices).
+
+> [!WARNING]
+> **Apple patched worse_query in iOS 27.3 beta 2** (build 24C5049d). WQ Files
+> can't open other apps' folders there or on any later build, and its startup
+> check says so. It works up to iOS 27.3 beta 1 (24C5037i) and on iOS 26.0 to
+> 26.7.2. Don't update to the 27.3 beta 2 or later if you want to keep using it.
 
 <p align="center"><img src="screenshots/ipad-home.webp" width="520" alt="WQ Files home screen on iPad"></p>
 
@@ -34,7 +40,8 @@ Tested by the maintainer on:
 | iPad Air 5 | iPadOS 27.0.1 |
 | iPhone 14 Pro (iPhone15,2) | 26.7.1 |
 
-Users have also reported it working on iOS 26.5, 27.2 and the 27.3 beta.
+Users have also reported it working on iOS 26.5, 27.2 and 27.3 beta 1. It does
+not work on 27.3 beta 2 or later (see above).
 Works on a device or iOS version not listed here? Open an issue with the Log
 (Settings → Log → Share).
 
@@ -278,12 +285,20 @@ and only change what you understand.
   leave it partly usable (app names, an untested iOS version) are shown once as
   a warning. The result is in **Log** as `health: …`.
 
+- **iOS 27.3 beta 2 or later**: Apple patched worse_query there. The startup
+  check recognizes these builds by their build number: when no folder opens,
+  it says the patch is the reason (and offers no Reset Access Cache, which
+  can't help); the iOS version row warns about it even if some folders still
+  open. Stay on 27.3 beta 1 or earlier.
+
 - **Every folder refused (`token cache recovery failed`)**: WQ Files briefly
   swaps its own `Library/Caches` folder in the App Group to get each access
   token. If a swap was interrupted, or another app sharing the App Group
   changed that folder, it refuses every token instead of risking the
   contents. The Log line says what it found (swap marker, preserved Caches,
-  what Caches is now). **Settings → Troubleshooting → Reset Access Cache**
+  what Caches is now). WQ Files now repairs this by itself (at most once a
+  minute; Log: `grant: access cache repaired automatically`).
+  **Settings → Troubleshooting → Reset Access Cache**
   (also on the startup check screen) puts the folder back; nothing is deleted.
   If it keeps coming back, another app signed with the same App Group is
   changing it.

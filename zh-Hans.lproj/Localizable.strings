@@ -1071,3 +1071,5 @@
 "There are no files or folders in here." = "这里没有文件或文件夹。";
 "Empty" = "空";
 "None of %lu sampled app folders could be opened, even after repairing the access cache. Another app that shares WQ Files' App Group (for example in LiveContainer) can get in the way: close it, then tap Reset Access Cache and Try Again. If it stays like this, send the Log." = "抽查的 %lu 个应用文件夹都无法打开，即使已修复访问缓存。与 WQ Files 共用 App Group 的其他应用（例如 LiveContainer 中的应用）可能造成干扰：请关闭它，然后轻点“重置访问缓存”和“重试”。如果仍然如此，请发送日志。";
+"None of %lu sampled app folders could be opened. Apple patched worse_query, the sandbox escape WQ Files is built on, in iOS 27.3 beta 2, so it can't work on this build (%@). It works up to iOS 27.3 beta 1 and on iOS 26." = "抽查的 %lu 个应用文件夹都无法打开。Apple 已在 iOS 27.3 beta 2 中修补了 WQ Files 所依赖的沙盒逃逸 worse_query，因此它无法在此版本（%@）上工作。它可在 iOS 27.3 beta 1 及更早版本和 iOS 26 上工作。";
+"iOS %@ (%@): Apple patched worse_query in iOS 27.3 beta 2. Folders that still open here may stop opening." = "iOS %@（%@）：Apple 已在 iOS 27.3 beta 2 中修补了 worse_query。这里目前还能打开的文件夹之后可能无法打开。";
