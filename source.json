@@ -21,6 +21,15 @@
       "category": "utilities",
       "versions": [
         {
+          "version": "0.9.12",
+          "buildVersion": "94",
+          "date": "2026-11-16",
+          "size": 2053202,
+          "downloadURL": "https://github.com/kolbicz/WQFiles/releases/download/v0.9.12/WQFiles.ipa",
+          "localizedDescription": "Wi-Fi Sharing: browse, download and upload files from any browser on the same Wi-Fi. Themes with importable .wqtheme files, Recent folders and files, progress bars, and a fix for a frozen screen.",
+          "minOSVersion": "26.0"
+        },
+        {
           "version": "0.9.11",
           "buildVersion": "92",
           "date": "2026-11-15",

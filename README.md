@@ -162,13 +162,25 @@ new files.
   folder you were in, once the startup check has passed.
 - **Check for Updates** (Settings, on by default): at most twice a day WQ
   Files downloads the public `source.json` from this repository and shows a
-  note on the start screen when a newer version is out. This is its only
-  network access; nothing about the device or its data is sent. Turn it off to
-  keep WQ Files fully offline.
+  note on the start screen when a newer version is out. This is the only
+  connection WQ Files makes itself (Wi-Fi Sharing only listens while its screen
+  is open); nothing about the device or its data is sent. Turn it off to keep
+  WQ Files fully offline.
 - **New Design** (Settings, on by default): the start screen with container
   cards and Home, Apps, Clean and Backups tabs; Settings opens from the gear.
   Turn it off for the classic design: one list with Containers, Tools and
   Settings. The switch takes effect right away.
+- **Wi-Fi Sharing** (a folder's ⋯ menu → **Share on Wi-Fi…**): a web page for
+  that folder, opened in any browser on the same Wi-Fi (address and QR code on
+  screen). Browse, open and download files, download folders as ZIP, and with
+  **Allow Uploads** add files by button or drag and drop; nothing is ever
+  overwritten or deleted. Password protected (user `wq`, a new random password
+  each time, or a fixed one in **Settings → Sharing Password**, kept in the
+  keychain). It stops when you close the screen or leave WQ Files. The page
+  follows the design and theme.
+- **Recent**: the clock button on the start screen lists the last folders and
+  files you opened, with the app they belong to; **Show All** has long-press
+  actions (Add to Favorites, Copy Path, Remove).
 
 App names come from LaunchServices' own database, read from lsd's container
 (the LaunchServices API itself refuses this app on 27.x). Apple services that
