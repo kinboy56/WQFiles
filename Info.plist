@@ -82,7 +82,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<false/>
+	<true/>
 	<key>MinimumOSVersion</key>
 	<string>26.0</string>
 	<key>NSLocalNetworkUsageDescription</key>

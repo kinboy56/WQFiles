@@ -58,6 +58,12 @@ EXPECTED_BUILD=$(plist_value CFBundleVersion Info.plist)
 EXPECTED_MINIMUM_OS=$(plist_value MinimumOSVersion Info.plist)
 APP_GROUP=$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups:0' entitlements.plist)
 [[ -n "$APP_GROUP" ]] || fail "entitlements.plist has no App Group"
+# WQ Files' folder (Backups, AppBackups) shows in the Files app only with both
+# keys on; 0.9.12 and 0.9.13 shipped without it.
+for key in UIFileSharingEnabled LSSupportsOpeningDocumentsInPlace; do
+    [[ "$(plist_value "$key" Info.plist)" == "true" ]] || \
+        fail "Info.plist $key must be true (WQ Files' folder in the Files app)"
+done
 [[ "$EXPECTED_MINIMUM_OS" == "$MINIMUM_IOS_VERSION" ]] || \
     fail "Info.plist minimum OS $EXPECTED_MINIMUM_OS does not match build policy $MINIMUM_IOS_VERSION"
 
