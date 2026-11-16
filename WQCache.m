@@ -801,6 +801,22 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
             safeCrashPath = WQCacheCrashPathIsSafe(crashPath);
         if (crashReachable && !safeCrashPath)
             wq_log(@"cache scan: Crash Logs path check failed: %@", WQCacheCrashPathProblem(crashPath));
+        // The folder must also open for reading. On iOS 27.0.1 worse_query
+        // doesn't reach mobile's Library/Logs (EPERM even with a token): then
+        // WQ Files can neither measure nor clean it, and the section is left
+        // out instead of showing as "can't be fully measured" on every scan.
+        if (safeCrashPath) {
+            int fd = open(crashPath.fileSystemRepresentation, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+            if (fd < 0 && (errno == EPERM || errno == EACCES) && wq_grant(crashPath))
+                fd = open(crashPath.fileSystemRepresentation, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+            if (fd >= 0) close(fd);
+            else {
+                int err = errno;
+                wq_log(@"cache scan: Crash Logs can't be read on this device (%@: %s, errno %d); left out",
+                       crashPath, strerror(err), err);
+                crashReachable = NO;
+            }
+        }
         WQCacheMeasurementState crashState = !crashReachable ? WQCacheMeasurementMissing
             : safeCrashPath ? WQCacheMeasureDirectory(crashPath, taskID, cancellation, &crash)
                             : WQCacheMeasurementLimited;
