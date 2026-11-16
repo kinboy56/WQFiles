@@ -5,6 +5,8 @@ and 27. "WQ" stands for worse_query, the sandbox technique it is built on. It
 reaches other apps' and system containers with no jailbreak and no kernel
 exploit. Tested on iOS 26.5 to the 27.3 beta; see [Tested devices](#tested-devices).
 
+<p align="center"><img src="screenshots/ipad-home.webp" width="520" alt="WQ Files home screen on iPad"></p>
+
 **iOS 26 (26.0 to 26.7.2):** supported since 0.7; tested on 26.7.1. worse_query reaches the app, extension, daemon and app group
 containers there, but not System Data or the system groups, so WQ Files hides
 those two and the Cache Cleaner has no crash-log section. A full inode scan
