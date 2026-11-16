@@ -21,6 +21,15 @@
       "category": "utilities",
       "versions": [
         {
+          "version": "0.9.15",
+          "buildVersion": "100",
+          "date": "2026-11-16",
+          "size": 2076710,
+          "downloadURL": "https://github.com/kolbicz/WQFiles/releases/download/v0.9.15/WQFiles.ipa",
+          "localizedDescription": "Recognizes iOS 27.3 beta 2+, where Apple patched worse_query. The access cache repairs itself when another app in the App Group broke it.",
+          "minOSVersion": "26.0"
+        },
+        {
           "version": "0.9.14",
           "buildVersion": "99",
           "date": "2026-11-16",
