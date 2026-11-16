@@ -2,7 +2,7 @@
 //  WQWebServer.m
 //  WQ Files
 //
-//  One request per connection (Connection: close), GET and HEAD only, HTTP
+//  One request per connection (Connection: close), GET, HEAD and PUT, HTTP
 //  Basic auth on every request. Routes:
 //    /browse/<path>/   folder page        /file/<path>[?dl=1]  open or download
 //    /zip/<path>       folder as ZIP      /                    → /browse/
@@ -27,6 +27,7 @@
 #import <net/if.h>
 #import <netinet/in.h>
 #import <sys/socket.h>
+#import <stdatomic.h>
 #import <sys/stat.h>
 #import <unistd.h>
 
@@ -114,6 +115,7 @@ void wq_edit_sharing_password(UIViewController *host, void (^done)(void))
 static const NSUInteger kWQWebMaxHeader = 16384;
 static const NSUInteger kWQWebMaxConnections = 12;
 static const size_t kWQWebChunk = 256 * 1024;
+static NSString *const kWQUploadStagePrefix = @".wq-upload-";
 
 NSArray<NSString *> *WQWebPathComponents(NSString *encoded)
 {
@@ -121,7 +123,7 @@ NSArray<NSString *> *WQWebPathComponents(NSString *encoded)
     for (NSString *raw in [encoded componentsSeparatedByString:@"/"]) {
         if (!raw.length) continue;
         NSString *c = raw.stringByRemovingPercentEncoding;
-        if (!c.length || [c isEqualToString:@"."] || [c isEqualToString:@".."] ||
+        if (!c.length || [c.lowercaseString hasPrefix:kWQUploadStagePrefix] || [c isEqualToString:@"."] || [c isEqualToString:@".."] ||
             [c containsString:@"/"] || [c containsString:@"\\"] || [c rangeOfString:@"\0"].location != NSNotFound) return nil;
         [out addObject:c];
     }
@@ -207,7 +209,8 @@ static BOOL WQWebSend(int fd, const void *bytes, size_t length)
     dispatch_source_t _source;
     dispatch_semaphore_t _slots;
     NSData *_expectedAuth;
-    volatile BOOL _stopped;
+    atomic_bool _stopped;
+    NSLock *_publishLock;
 }
 
 - (instancetype)initWithRoot:(NSString *)root title:(NSString *)title rootEntries:(NSArray<WQWebEntry *> *)entries
@@ -221,6 +224,8 @@ static BOOL WQWebSend(int fd, const void *bytes, size_t length)
             _entries = byName;
         }
         _listenFD = -1;
+        atomic_init(&_stopped, false);
+        _publishLock = [NSLock new];
         _user = @"wq";
         _password = wq_sharing_password() ?: [WQWebServer randomPassword];
         _slots = dispatch_semaphore_create(kWQWebMaxConnections);
@@ -323,7 +328,9 @@ static BOOL WQWebSend(int fd, const void *bytes, size_t length)
 {
     if (!_running) return;
     _running = NO;
+    [_publishLock lock];
     _stopped = YES;
+    [_publishLock unlock];
     if (_source) dispatch_source_cancel(_source);
     _source = nil;
     _listenFD = -1;
@@ -509,25 +516,43 @@ static BOOL WQWebSend(int fd, const void *bytes, size_t length)
     }
     free(chunk);
     close(out);
-    if (!ok || remaining > 0) {
+    if (!ok || remaining > 0 || _stopped) {
         unlink(temp.fileSystemRepresentation);
         if (writeError == ENOSPC) reply(507, WQLocalized(@"Not enough space on this device."));
         else if (writeError) reply(500, @(strerror(writeError)));
         return;   // the browser went away
     }
-    // Never overwrite: "name.ext", then "name 2.ext", "name 3.ext"…
+    // Stage the bytes on the destination volume outside the publish lock.
+    // Only the final no-replace rename is serialized with Stop.
+    NSString *stageName = [kWQUploadStagePrefix stringByAppendingString:NSUUID.UUID.UUIDString];
+    NSString *stage = [dir stringByAppendingPathComponent:stageName];
+    NSString *error = nil;
+    BOOL staged = !_stopped && wq_create_file_from(stage, temp, &error);
+    unlink(temp.fileSystemRepresentation);
+    if (!staged) {
+        if (!_stopped) reply(500, WQLocalizedFormat(@"Upload failed: %@", error ?: @"?"));
+        return;
+    }
+
     NSString *base = name.stringByDeletingPathExtension, *ext = name.pathExtension;
-    NSString *finalName = nil, *error = nil;
-    for (NSUInteger i = 1; i < 1000 && !finalName; i++) {
+    NSString *finalName = nil;
+    NSDictionary *identity = wq_item_identity(stage);
+    for (NSUInteger i = 1; identity && i < 1000 && !finalName && !_stopped; i++) {
         NSString *candidate = i == 1 ? name : [NSString stringWithFormat:@"%@ %lu", base, (unsigned long)i];
         if (i > 1 && ext.length) candidate = [candidate stringByAppendingPathExtension:ext];
-        NSString *path = [dir stringByAppendingPathComponent:candidate];
-        struct stat existing;
-        if (wq_stat(path, &existing)) continue;
-        if (wq_create_file_from(path, temp, &error)) finalName = candidate;
-        else if (errno != EEXIST) break;
+        [_publishLock lock];
+        BOOL permitted = !_stopped && self.allowUploads;
+        BOOL published = permitted && wq_rename_expecting(stage, candidate, identity, &error);
+        int publishError = errno;
+        [_publishLock unlock];
+        if (published) finalName = candidate;
+        else if (!permitted || publishError != EEXIST) break;
     }
-    unlink(temp.fileSystemRepresentation);
+    if (!finalName && identity && [identity isEqualToDictionary:wq_item_identity(stage)]) {
+        if (unlink(stage.fileSystemRepresentation) != 0 && wq_grant(dir))
+            unlink(stage.fileSystemRepresentation);
+    }
+    if (!finalName && _stopped) return;
     if (!finalName) { reply(500, WQLocalizedFormat(@"Upload failed: %@", error ?: @"?")); return; }
     wq_log(@"wifi sharing: uploaded %@ (%lld bytes) to %@", finalName, length, dir);
     NSString *line = [NSString stringWithFormat:@"PUT %@", [[@"/" stringByAppendingString:[dirComponents componentsJoinedByString:@"/"]] stringByAppendingPathComponent:finalName]];
@@ -686,7 +711,12 @@ static NSString *WQWebDisposition(NSString *kind, NSString *name)
     NSString *zip = [dir stringByAppendingPathComponent:[[name stringByReplacingOccurrencesOfString:@"/" withString:@"_"] stringByAppendingPathExtension:@"zip"]];
     WQArchiveIO *io = [WQArchiveIO new];
     io.stat = ^BOOL(NSString *p, struct stat *s) { return wq_stat(p, s); };
-    io.list = ^NSArray<NSString *> *(NSString *d) { return wq_list(d, NULL); };
+    io.list = ^NSArray<NSString *> *(NSString *d) {
+        return [wq_list(d, NULL) filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:
+            ^BOOL(NSString *name, NSDictionary *__unused bindings) {
+                return ![name.lowercaseString hasPrefix:kWQUploadStagePrefix];
+            }]];
+    };
     io.openRead = ^int(NSString *p) { return wq_open_for_reading(p); };
     io.skipUnreadable = YES;
     io.expectedUnreadableNames = [NSSet setWithObject:@".com.apple.mobile_container_manager.metadata.plist"];
@@ -730,6 +760,7 @@ static NSString *WQWebDisposition(NSString *kind, NSString *name)
     BOOL containers = [@[@"Application", @"AppGroup", @"PluginKitPlugin", @"InternalDaemon", @"System"]
                        containsObject:path.lastPathComponent];
     for (NSString *name in names) {
+        if ([name.lowercaseString hasPrefix:kWQUploadStagePrefix]) continue;
         WQWebItem *item = [WQWebItem new];
         item.name = name;
         WQWebEntry *entry = (!components.count && _entries) ? _entries[name] : nil;
