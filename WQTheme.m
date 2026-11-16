@@ -21,6 +21,7 @@ static const NSUInteger kWQThemeMaxBytes = 64 * 1024;
 @interface WQTheme ()
 @property (nonatomic, copy, readwrite) NSString *identifier, *name;
 @property (nonatomic, copy, readwrite, nullable) NSString *author;
+@property (nonatomic, readwrite) BOOL builtIn;
 @property (nonatomic, strong) WQThemeAppearance *dark, *light;
 @end
 
@@ -158,17 +159,37 @@ static void WQThemeChanged(void)
     [NSNotificationCenter.defaultCenter postNotificationName:WQThemeChangedNotification object:nil];
 }
 
+static NSString *WQThemeBundleDirectory(void)
+{
+    return [NSBundle.mainBundle.resourcePath stringByAppendingPathComponent:@"Themes"];
+}
+
+// The file behind an identifier: imported first, else built in.
+static NSString *WQThemePath(NSString *identifier, BOOL *builtIn)
+{
+    NSString *name = [identifier stringByAppendingPathExtension:@"wqtheme"];
+    NSString *imported = [WQThemeDirectory() stringByAppendingPathComponent:name];
+    if ([NSFileManager.defaultManager fileExistsAtPath:imported]) { if (builtIn) *builtIn = NO; return imported; }
+    NSString *bundled = [WQThemeBundleDirectory() stringByAppendingPathComponent:name];
+    if ([NSFileManager.defaultManager fileExistsAtPath:bundled]) { if (builtIn) *builtIn = YES; return bundled; }
+    return nil;
+}
+
 NSArray<WQTheme *> *wq_installed_themes(void)
 {
-    NSString *dir = WQThemeDirectory();
-    NSMutableArray<WQTheme *> *themes = [NSMutableArray new];
-    for (NSString *file in [NSFileManager.defaultManager contentsOfDirectoryAtPath:dir error:nil]) {
-        if (![file.pathExtension isEqualToString:@"wqtheme"]) continue;
-        WQTheme *theme = wq_theme_parse([NSData dataWithContentsOfFile:[dir stringByAppendingPathComponent:file]] ?: [NSData data], NULL);
-        if (!theme) continue;
-        theme.identifier = file.stringByDeletingPathExtension;
-        [themes addObject:theme];
+    NSMutableDictionary<NSString *, WQTheme *> *byID = [NSMutableDictionary new];
+    for (NSString *dir in @[WQThemeBundleDirectory(), WQThemeDirectory()]) {   // imported ones win
+        BOOL bundled = [dir isEqualToString:WQThemeBundleDirectory()];
+        for (NSString *file in [NSFileManager.defaultManager contentsOfDirectoryAtPath:dir error:nil]) {
+            if (![file.pathExtension isEqualToString:@"wqtheme"]) continue;
+            WQTheme *theme = wq_theme_parse([NSData dataWithContentsOfFile:[dir stringByAppendingPathComponent:file]] ?: [NSData data], NULL);
+            if (!theme) continue;
+            theme.identifier = file.stringByDeletingPathExtension;
+            theme.builtIn = bundled;
+            byID[theme.identifier] = theme;
+        }
     }
+    NSMutableArray<WQTheme *> *themes = [byID.allValues mutableCopy];
     [themes sortUsingComparator:^NSComparisonResult(WQTheme *a, WQTheme *b) { return [a.name localizedStandardCompare:b.name]; }];
     return themes;
 }
@@ -188,9 +209,11 @@ WQTheme *wq_active_theme(void)
     @synchronized (WQTheme.class) {
         if (gActiveTheme && [gActiveThemeID isEqualToString:identifier]) return gActiveTheme;
     }
-    NSString *path = [[WQThemeDirectory() stringByAppendingPathComponent:identifier] stringByAppendingPathExtension:@"wqtheme"];
-    WQTheme *theme = wq_theme_parse([NSData dataWithContentsOfFile:path] ?: [NSData data], NULL);
+    BOOL builtIn = NO;
+    NSString *path = WQThemePath(identifier, &builtIn);
+    WQTheme *theme = path ? wq_theme_parse([NSData dataWithContentsOfFile:path] ?: [NSData data], NULL) : nil;
     theme.identifier = identifier;
+    theme.builtIn = builtIn;
     @synchronized (WQTheme.class) { gActiveTheme = theme; gActiveThemeID = identifier; }
     return theme;   // nil when the file went missing: the default colors are used
 }
@@ -227,14 +250,16 @@ void wq_delete_theme(NSString *identifier)
 {
     NSString *path = [[WQThemeDirectory() stringByAppendingPathComponent:identifier] stringByAppendingPathExtension:@"wqtheme"];
     [NSFileManager.defaultManager removeItemAtPath:path error:nil];
-    if ([wq_active_theme_id() isEqualToString:identifier]) wq_set_active_theme_id(WQThemeDefault);
+    // A built-in theme of the same name takes its place again; otherwise
+    // the active choice falls back to Default.
+    if ([wq_active_theme_id() isEqualToString:identifier] && !WQThemePath(identifier, NULL)) wq_set_active_theme_id(WQThemeDefault);
     else WQThemeChanged();
 }
 
 NSURL *wq_theme_file(NSString *identifier)
 {
-    NSString *path = [[WQThemeDirectory() stringByAppendingPathComponent:identifier] stringByAppendingPathExtension:@"wqtheme"];
-    return [NSFileManager.defaultManager fileExistsAtPath:path] ? [NSURL fileURLWithPath:path] : nil;
+    NSString *path = WQThemePath(identifier, NULL);
+    return path ? [NSURL fileURLWithPath:path] : nil;
 }
 
 NSData *wq_theme_export_current(NSString *name)
@@ -329,7 +354,7 @@ typedef NS_ENUM(NSInteger, WQThemeSection) { WQThemeSectionThemes, WQThemeSectio
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
 {
     if (section == WQThemeSectionThemes)
-        return WQLocalized(@"Tap a theme to use it. Long-press or swipe an imported theme to share or delete it. Themes also color the Wi-Fi Sharing page.");
+        return WQLocalized(@"Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page.");
     if (section == WQThemeSectionPlain)
         return WQLocalized(@"Plain Background: a plain black (or white) background instead of the colored one.");
     return WQLocalized(@"A theme is a small .wqtheme file (JSON) with colors for dark and light mode. Export Current Colors gives you one to start from; the format is described in the README on GitHub. Open a .wqtheme file with WQ Files to install it.");
@@ -367,7 +392,8 @@ typedef NS_ENUM(NSInteger, WQThemeSection) { WQThemeSectionThemes, WQThemeSectio
         } else {
             WQTheme *theme = _installed[(NSUInteger)indexPath.row - 2];
             c.text = WQVerbatim(theme.name);
-            c.secondaryText = theme.author.length ? WQVerbatim(WQLocalizedFormat(@"by %@", theme.author)) : nil;
+            c.secondaryText = theme.builtIn ? WQLocalized(@"Built in")
+                : theme.author.length ? WQVerbatim(WQLocalizedFormat(@"by %@", theme.author)) : nil;
             // Swatches: its dark background and accent.
             WQThemeAppearance *dark = [theme appearanceDark:YES];
             UIView *swatch = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 44, 26)];
@@ -456,14 +482,14 @@ typedef NS_ENUM(NSInteger, WQThemeSection) { WQThemeSectionThemes, WQThemeSectio
 
 - (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    return indexPath.section == WQThemeSectionThemes && indexPath.row >= 2;
+    return indexPath.section == WQThemeSectionThemes && indexPath.row >= 2;   // share; delete only imported ones
 }
 
 - (UISwipeActionsConfiguration *)tableView:(UITableView *)tableView trailingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath
 {
     if (![self tableView:tableView canEditRowAtIndexPath:indexPath]) return nil;
     WQTheme *theme = _installed[(NSUInteger)indexPath.row - 2];
-    UIContextualAction *delete = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleDestructive title:WQLocalized(@"Delete")
+    UIContextualAction *delete = theme.builtIn ? nil : [UIContextualAction contextualActionWithStyle:UIContextualActionStyleDestructive title:WQLocalized(@"Delete")
         handler:^(UIContextualAction *__unused action, UIView *__unused view, void (^completion)(BOOL)) {
             wq_delete_theme(theme.identifier);
             completion(YES);
@@ -476,7 +502,7 @@ typedef NS_ENUM(NSInteger, WQThemeSection) { WQThemeSectionThemes, WQThemeSectio
             completion(YES);
         }];
     share.backgroundColor = UIColor.systemBlueColor;
-    UISwipeActionsConfiguration *config = [UISwipeActionsConfiguration configurationWithActions:@[delete, share]];
+    UISwipeActionsConfiguration *config = [UISwipeActionsConfiguration configurationWithActions:delete ? @[delete, share] : @[share]];
     config.performsFirstActionWithFullSwipe = NO;
     return config;
 }
@@ -496,7 +522,7 @@ typedef NS_ENUM(NSInteger, WQThemeSection) { WQThemeSectionThemes, WQThemeSectio
         UIAction *delete = [UIAction actionWithTitle:WQLocalized(@"Delete") image:[UIImage systemImageNamed:@"trash"] identifier:nil
                                              handler:^(UIAction *__unused a) { wq_delete_theme(theme.identifier); }];
         delete.attributes = UIMenuElementAttributesDestructive;
-        return [UIMenu menuWithTitle:WQVerbatim(theme.name) children:@[share, delete]];
+        return [UIMenu menuWithTitle:WQVerbatim(theme.name) children:theme.builtIn ? @[share] : @[share, delete]];
     }];
 }
 

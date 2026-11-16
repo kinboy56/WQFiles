@@ -116,6 +116,11 @@ done
 for lproj in "$ROOT"/*.lproj; do
     [[ -d "$lproj" ]] && cp -R "$lproj" "$APP/"
 done
+# The example themes ship in the app (Settings → Theme shows them built in).
+if compgen -G "$ROOT/themes/*.wqtheme" >/dev/null; then
+    mkdir -p "$APP/Themes"
+    cp "$ROOT"/themes/*.wqtheme "$APP/Themes/"
+fi
 plutil -convert binary1 "$APP/Info.plist"
 codesign -f -s - --entitlements entitlements.plist "$APP"
 

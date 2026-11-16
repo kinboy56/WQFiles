@@ -41,12 +41,15 @@ extern NSString *const WQThemeCustomColor;   // tinted from the picked color
 @interface WQTheme : NSObject
 @property (nonatomic, copy, readonly) NSString *identifier, *name;
 @property (nonatomic, copy, readonly, nullable) NSString *author;
+// Shipped with WQ Files (themes/ in the repository): can't be deleted.
+@property (nonatomic, readonly) BOOL builtIn;
 - (WQThemeAppearance *)appearanceDark:(BOOL)dark;
 @end
 
 // Parses and checks a theme file; nil with a reason when it isn't valid.
 WQTheme *_Nullable wq_theme_parse(NSData *data, NSString *_Nullable *_Nullable errorText);
-// Installed themes, sorted by name.
+// Built-in and imported themes, sorted by name. An imported theme with the
+// same name as a built-in one replaces it.
 NSArray<WQTheme *> *wq_installed_themes(void);
 // The active choice: WQThemeDefault, WQThemeCustomColor or an installed
 // theme's identifier. The installed theme itself, or nil for the built-ins.

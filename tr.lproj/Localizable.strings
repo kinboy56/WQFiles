@@ -1050,9 +1050,10 @@
 "by %@" = "%@ tarafından";
 "Import Theme…" = "Tema İçe Aktar…";
 "Export Current Colors…" = "Mevcut Renkleri Dışa Aktar…";
-"Tap a theme to use it. Long-press or swipe an imported theme to share or delete it. Themes also color the Wi-Fi Sharing page." = "Kullanmak için bir temaya dokunun. Paylaşmak veya silmek için içe aktarılan bir temayı basılı tutun ya da kaydırın. Temalar Wi-Fi Paylaşımı sayfasını da renklendirir.";
 "A theme is a small .wqtheme file (JSON) with colors for dark and light mode. Export Current Colors gives you one to start from; the format is described in the README on GitHub. Open a .wqtheme file with WQ Files to install it." = "Tema, koyu ve açık mod için renkler içeren küçük bir .wqtheme dosyasıdır (JSON). “Mevcut Renkleri Dışa Aktar” başlangıç için bir tane verir; biçim GitHub'daki README'de açıklanmıştır. Yüklemek için bir .wqtheme dosyasını WQ Files ile açın.";
 "Name of the theme" = "Temanın adı";
 "My Theme" = "Temam";
 "Export" = "Dışa Aktar";
 "Theme: the colors of the new design: the built-in ones, a color you pick, or themes you import." = "Tema: yeni tasarımın renkleri: yerleşik olanlar, seçtiğiniz bir renk veya içe aktardığınız temalar.";
+"Built in" = "Yerleşik";
+"Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "Kullanmak için bir temaya dokunun. Paylaşmak ya da içe aktarılan bir temayı silmek için temayı basılı tutun veya kaydırın. Temalar Wi-Fi Paylaşımı sayfasını da renklendirir.";

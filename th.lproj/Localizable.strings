@@ -1050,9 +1050,10 @@
 "by %@" = "โดย %@";
 "Import Theme…" = "นำเข้าธีม…";
 "Export Current Colors…" = "ส่งออกสีปัจจุบัน…";
-"Tap a theme to use it. Long-press or swipe an imported theme to share or delete it. Themes also color the Wi-Fi Sharing page." = "แตะธีมเพื่อใช้งาน แตะค้างหรือปัดธีมที่นำเข้าเพื่อแชร์หรือลบ ธีมยังใช้กับหน้าการแชร์ผ่าน Wi-Fi ด้วย";
 "A theme is a small .wqtheme file (JSON) with colors for dark and light mode. Export Current Colors gives you one to start from; the format is described in the README on GitHub. Open a .wqtheme file with WQ Files to install it." = "ธีมคือไฟล์ .wqtheme (JSON) ขนาดเล็กที่มีสีสำหรับโหมดมืดและโหมดสว่าง “ส่งออกสีปัจจุบัน” จะให้ไฟล์ตั้งต้น รูปแบบอธิบายไว้ใน README บน GitHub เปิดไฟล์ .wqtheme ด้วย WQ Files เพื่อติดตั้ง";
 "Name of the theme" = "ชื่อธีม";
 "My Theme" = "ธีมของฉัน";
 "Export" = "ส่งออก";
 "Theme: the colors of the new design: the built-in ones, a color you pick, or themes you import." = "ธีม: สีของดีไซน์ใหม่ ทั้งแบบในตัว สีที่คุณเลือก หรือธีมที่นำเข้า";
+"Built in" = "ในตัว";
+"Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "แตะธีมเพื่อใช้งาน แตะค้างหรือปัดธีมเพื่อแชร์ หรือลบธีมที่นำเข้า ธีมยังใช้กับหน้าการแชร์ผ่าน Wi-Fi ด้วย";

@@ -179,7 +179,7 @@ symbol tile.
 
 **Settings → Theme** sets the colors of the new design: **Default**, **Custom Color** (pick one color, WQ Files derives the rest) or a theme you import. **Plain Background** works with all of them. A theme also colors the Wi-Fi Sharing page.
 
-A theme is a small JSON file with the extension `.wqtheme`. Open one with WQ Files (share sheet or Files app) or use **Import Theme…**; **Export Current Colors…** writes the colors you use now as a starting point. Two examples are in [`themes/`](themes).
+A theme is a small JSON file with the extension `.wqtheme`. Open one with WQ Files (share sheet or Files app) or use **Import Theme…**; **Export Current Colors…** writes the colors you use now as a starting point. WQ Files comes with the two themes in [`themes/`](themes) (Midnight and Sunset) built in; an imported theme with the same name replaces the built-in one.
 
 ```json
 {

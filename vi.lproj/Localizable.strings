@@ -1050,9 +1050,10 @@
 "by %@" = "của %@";
 "Import Theme…" = "Nhập chủ đề…";
 "Export Current Colors…" = "Xuất màu hiện tại…";
-"Tap a theme to use it. Long-press or swipe an imported theme to share or delete it. Themes also color the Wi-Fi Sharing page." = "Chạm vào một chủ đề để dùng. Nhấn giữ hoặc vuốt chủ đề đã nhập để chia sẻ hoặc xóa. Chủ đề cũng tô màu trang Chia sẻ Wi-Fi.";
 "A theme is a small .wqtheme file (JSON) with colors for dark and light mode. Export Current Colors gives you one to start from; the format is described in the README on GitHub. Open a .wqtheme file with WQ Files to install it." = "Chủ đề là một tệp .wqtheme (JSON) nhỏ chứa màu cho chế độ tối và sáng. “Xuất màu hiện tại” cho bạn một tệp để bắt đầu; định dạng được mô tả trong README trên GitHub. Mở tệp .wqtheme bằng WQ Files để cài.";
 "Name of the theme" = "Tên chủ đề";
 "My Theme" = "Chủ đề của tôi";
 "Export" = "Xuất";
 "Theme: the colors of the new design: the built-in ones, a color you pick, or themes you import." = "Chủ đề: màu của thiết kế mới: màu tích hợp, một màu bạn chọn hoặc chủ đề bạn nhập.";
+"Built in" = "Tích hợp";
+"Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "Chạm vào một chủ đề để dùng. Nhấn giữ hoặc vuốt chủ đề để chia sẻ, hoặc để xóa chủ đề đã nhập. Chủ đề cũng tô màu trang Chia sẻ Wi-Fi.";

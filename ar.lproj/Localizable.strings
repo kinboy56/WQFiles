@@ -1046,9 +1046,10 @@
 "by %@" = "بواسطة %@";
 "Import Theme…" = "استيراد سمة…";
 "Export Current Colors…" = "تصدير الألوان الحالية…";
-"Tap a theme to use it. Long-press or swipe an imported theme to share or delete it. Themes also color the Wi-Fi Sharing page." = "اضغط على سمة لاستخدامها. اضغط مطولًا أو اسحب سمة مستوردة لمشاركتها أو حذفها. تلوّن السمات صفحة المشاركة عبر Wi-Fi أيضًا.";
 "A theme is a small .wqtheme file (JSON) with colors for dark and light mode. Export Current Colors gives you one to start from; the format is described in the README on GitHub. Open a .wqtheme file with WQ Files to install it." = "السمة ملف .wqtheme صغير (JSON) فيه ألوان الوضع الداكن والفاتح. يمنحك “تصدير الألوان الحالية” ملفًا تبدأ منه؛ والصيغة موضحة في ملف README على GitHub. افتح ملف .wqtheme باستخدام WQ Files لتثبيته.";
 "Name of the theme" = "اسم السمة";
 "My Theme" = "سمتي";
 "Export" = "تصدير";
 "Theme: the colors of the new design: the built-in ones, a color you pick, or themes you import." = "السمة: ألوان التصميم الجديد: المدمجة، أو لون تختاره، أو سمات تستوردها.";
+"Built in" = "مدمجة";
+"Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "اضغط على سمة لاستخدامها. اضغط مطولًا أو اسحب سمة لمشاركتها، أو لحذف سمة مستوردة. تلوّن السمات صفحة المشاركة عبر Wi-Fi أيضًا.";

@@ -1050,9 +1050,10 @@
 "by %@" = "作者：%@";
 "Import Theme…" = "导入主题…";
 "Export Current Colors…" = "导出当前颜色…";
-"Tap a theme to use it. Long-press or swipe an imported theme to share or delete it. Themes also color the Wi-Fi Sharing page." = "轻点主题即可使用。长按或滑动导入的主题可共享或删除。主题也会应用到 Wi-Fi 共享页面。";
 "A theme is a small .wqtheme file (JSON) with colors for dark and light mode. Export Current Colors gives you one to start from; the format is described in the README on GitHub. Open a .wqtheme file with WQ Files to install it." = "主题是一个小型 .wqtheme 文件（JSON），包含深色和浅色模式的颜色。“导出当前颜色”可生成一个起点文件；格式说明见 GitHub 上的 README。用 WQ Files 打开 .wqtheme 文件即可安装。";
 "Name of the theme" = "主题名称";
 "My Theme" = "我的主题";
 "Export" = "导出";
 "Theme: the colors of the new design: the built-in ones, a color you pick, or themes you import." = "主题：新设计的颜色：内置颜色、你选择的颜色或导入的主题。";
+"Built in" = "内置";
+"Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "轻点主题即可使用。长按或滑动主题可共享，或删除导入的主题。主题也会应用到 Wi-Fi 共享页面。";

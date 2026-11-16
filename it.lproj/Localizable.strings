@@ -1046,9 +1046,10 @@
 "by %@" = "di %@";
 "Import Theme…" = "Importa tema…";
 "Export Current Colors…" = "Esporta colori attuali…";
-"Tap a theme to use it. Long-press or swipe an imported theme to share or delete it. Themes also color the Wi-Fi Sharing page." = "Tocca un tema per usarlo. Tieni premuto o scorri un tema importato per condividerlo o eliminarlo. I temi colorano anche la pagina della condivisione Wi-Fi.";
 "A theme is a small .wqtheme file (JSON) with colors for dark and light mode. Export Current Colors gives you one to start from; the format is described in the README on GitHub. Open a .wqtheme file with WQ Files to install it." = "Un tema è un piccolo file .wqtheme (JSON) con i colori per la modalità scura e chiara. “Esporta colori attuali” te ne fornisce uno da cui partire; il formato è descritto nel README su GitHub. Apri un file .wqtheme con WQ Files per installarlo.";
 "Name of the theme" = "Nome del tema";
 "My Theme" = "Il mio tema";
 "Export" = "Esporta";
 "Theme: the colors of the new design: the built-in ones, a color you pick, or themes you import." = "Tema: i colori del nuovo design: quelli integrati, un colore a scelta o temi importati.";
+"Built in" = "Integrato";
+"Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "Tocca un tema per usarlo. Tieni premuto o scorri un tema per condividerlo o per eliminarne uno importato. I temi colorano anche la pagina della condivisione Wi-Fi.";

@@ -1050,9 +1050,10 @@
 "by %@" = "제작: %@";
 "Import Theme…" = "테마 가져오기…";
 "Export Current Colors…" = "현재 색상 내보내기…";
-"Tap a theme to use it. Long-press or swipe an imported theme to share or delete it. Themes also color the Wi-Fi Sharing page." = "테마를 탭하면 사용합니다. 가져온 테마를 길게 누르거나 쓸어서 공유하거나 삭제하세요. 테마는 Wi-Fi 공유 페이지에도 적용됩니다.";
 "A theme is a small .wqtheme file (JSON) with colors for dark and light mode. Export Current Colors gives you one to start from; the format is described in the README on GitHub. Open a .wqtheme file with WQ Files to install it." = "테마는 다크 모드와 라이트 모드 색상이 담긴 작은 .wqtheme 파일(JSON)입니다. “현재 색상 내보내기”로 시작할 파일을 만들 수 있으며, 형식은 GitHub의 README에 설명되어 있습니다. .wqtheme 파일을 WQ Files로 열면 설치됩니다.";
 "Name of the theme" = "테마 이름";
 "My Theme" = "내 테마";
 "Export" = "내보내기";
 "Theme: the colors of the new design: the built-in ones, a color you pick, or themes you import." = "테마: 새 디자인의 색상입니다. 기본 제공 색상, 직접 고른 색상 또는 가져온 테마를 사용할 수 있습니다.";
+"Built in" = "기본 제공";
+"Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "테마를 탭하면 사용합니다. 테마를 길게 누르거나 쓸어서 공유하거나, 가져온 테마를 삭제하세요. 테마는 Wi-Fi 공유 페이지에도 적용됩니다.";
