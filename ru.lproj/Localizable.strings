@@ -1070,3 +1070,4 @@
 "Empty Folder" = "Пустая папка";
 "There are no files or folders in here." = "Здесь нет файлов и папок.";
 "Empty" = "Пусто";
+"None of %lu sampled app folders could be opened, even after repairing the access cache. Another app that shares WQ Files' App Group (for example in LiveContainer) can get in the way: close it, then tap Reset Access Cache and Try Again. If it stays like this, send the Log." = "Ни одна из %lu проверенных папок приложений не открылась, даже после восстановления кэша доступа. Мешать может другое приложение с той же App Group, что у WQ Files (например, в LiveContainer): закройте его, затем нажмите «Сбросить кэш доступа» и «Повторить». Если ничего не изменится, отправьте журнал.";

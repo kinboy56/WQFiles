@@ -1070,3 +1070,4 @@
 "Empty Folder" = "Pasta vazia";
 "There are no files or folders in here." = "Não há arquivos nem pastas aqui.";
 "Empty" = "Vazia";
+"None of %lu sampled app folders could be opened, even after repairing the access cache. Another app that shares WQ Files' App Group (for example in LiveContainer) can get in the way: close it, then tap Reset Access Cache and Try Again. If it stays like this, send the Log." = "Nenhuma das %lu pastas de apps verificadas pôde ser aberta, mesmo após reparar o cache de acesso. Outro app que compartilha o App Group do WQ Files (por exemplo no LiveContainer) pode atrapalhar: feche-o, depois toque em Redefinir cache de acesso e Tentar novamente. Se continuar assim, envie o Log.";

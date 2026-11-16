@@ -1070,3 +1070,4 @@
 "Empty Folder" = "โฟลเดอร์ว่าง";
 "There are no files or folders in here." = "ไม่มีไฟล์หรือโฟลเดอร์ในนี้";
 "Empty" = "ว่าง";
+"None of %lu sampled app folders could be opened, even after repairing the access cache. Another app that shares WQ Files' App Group (for example in LiveContainer) can get in the way: close it, then tap Reset Access Cache and Try Again. If it stays like this, send the Log." = "ไม่สามารถเปิดโฟลเดอร์แอปที่ตรวจ %lu โฟลเดอร์ได้เลย แม้หลังซ่อมแคชการเข้าถึงแล้ว แอปอื่นที่ใช้ App Group เดียวกับ WQ Files (เช่นใน LiveContainer) อาจรบกวน: ปิดแอปนั้น แล้วแตะ รีเซ็ตแคชการเข้าถึง และ ลองอีกครั้ง หากยังเป็นอยู่ โปรดส่ง Log";

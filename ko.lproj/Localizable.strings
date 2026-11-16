@@ -1070,3 +1070,4 @@
 "Empty Folder" = "빈 폴더";
 "There are no files or folders in here." = "파일이나 폴더가 없습니다.";
 "Empty" = "비어 있음";
+"None of %lu sampled app folders could be opened, even after repairing the access cache. Another app that shares WQ Files' App Group (for example in LiveContainer) can get in the way: close it, then tap Reset Access Cache and Try Again. If it stays like this, send the Log." = "확인한 앱 폴더 %lu개 중 하나도 열 수 없습니다. 접근 캐시를 복구한 뒤에도 마찬가지입니다. WQ Files의 App Group을 함께 쓰는 다른 앱(예: LiveContainer 안의 앱)이 방해할 수 있습니다. 그 앱을 닫고 접근 캐시 재설정과 다시 시도를 탭하세요. 계속 그렇다면 로그를 보내 주세요.";

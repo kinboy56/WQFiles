@@ -1070,3 +1070,4 @@
 "Empty Folder" = "Boş Klasör";
 "There are no files or folders in here." = "Burada dosya veya klasör yok.";
 "Empty" = "Boş";
+"None of %lu sampled app folders could be opened, even after repairing the access cache. Another app that shares WQ Files' App Group (for example in LiveContainer) can get in the way: close it, then tap Reset Access Cache and Try Again. If it stays like this, send the Log." = "Denetlenen %lu uygulama klasörünün hiçbiri, erişim önbelleği onarıldıktan sonra bile açılamadı. WQ Files'ın App Group'unu paylaşan başka bir uygulama (örneğin LiveContainer'da) engel olabilir: onu kapatın, ardından Erişim Önbelleğini Sıfırla'ya ve Tekrar Dene'ye dokunun. Böyle kalırsa Log'u gönderin.";

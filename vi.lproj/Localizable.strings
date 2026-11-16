@@ -1070,3 +1070,4 @@
 "Empty Folder" = "Thư mục trống";
 "There are no files or folders in here." = "Không có tệp hay thư mục nào ở đây.";
 "Empty" = "Trống";
+"None of %lu sampled app folders could be opened, even after repairing the access cache. Another app that shares WQ Files' App Group (for example in LiveContainer) can get in the way: close it, then tap Reset Access Cache and Try Again. If it stays like this, send the Log." = "Không mở được thư mục nào trong %lu thư mục ứng dụng đã kiểm tra, kể cả sau khi sửa bộ nhớ đệm truy cập. Một ứng dụng khác dùng chung App Group với WQ Files (ví dụ trong LiveContainer) có thể gây cản trở: hãy đóng nó, rồi chạm Đặt lại Bộ nhớ Đệm Truy cập và Thử lại. Nếu vẫn vậy, hãy gửi Log.";

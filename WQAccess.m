@@ -267,6 +267,18 @@ static int64_t wq_query(NSString *target, BOOL altFlags)
         // its original inode and nested contents. Next acquisition recovers an
         // interrupted swap from the durable marker, before doing another query.
         if (WQCacheSwapBegin(library, target)) handle = wq_query_token(group, altFlags);
+        else {
+            // Library/Caches isn't in a state a query can start from, e.g. a
+            // link another worse_query app sharing the App Group left behind
+            // (LiveContainer, issue #65). wq_grant repairs it and asks again.
+            handle = -5;
+            static NSString *lastState;
+            NSString *state = [NSString stringWithFormat:@"%@ (%@)", wq_cache_state(library), wq_errno(errno)];
+            if (![state isEqualToString:lastState]) {
+                lastState = state;
+                wq_log(@"grant: the access cache in the App Group can't start a query: %@", state);
+            }
+        }
     } @catch (NSException *exception) {
         wq_log(@"token query exception: %@", exception.reason);
         handle = -9;
@@ -383,6 +395,19 @@ BOOL wq_grant(NSString *path)
     static int preferAlt = -1;
     BOOL altFirst = preferAlt >= 0 ? (BOOL)preferAlt : !wq_system_areas_reachable();
     int64_t handle = wq_query(key, altFirst);
+    // A broken access cache refuses every folder until it is repaired: do
+    // what Settings → Reset Access Cache does (nothing is deleted; anything
+    // in the way is renamed aside), at most once a minute, and ask again.
+    if (handle == -5) {
+        static CFAbsoluteTime lastRepair;
+        if (CFAbsoluteTimeGetCurrent() - lastRepair > 60) {
+            lastRepair = CFAbsoluteTimeGetCurrent();
+            NSString *error = nil;
+            BOOL repaired = wq_reset_access_cache(&error);
+            wq_log(@"grant: access cache repaired automatically%@", repaired ? @"" : [@" — FAILED: " stringByAppendingString:error ?: @"?"]);
+            if (repaired) handle = wq_query(key, altFirst);
+        }
+    }
     BOOL usedAlt = altFirst;
     if (handle >= 0 && !wq_grant_opens(key)) {
         static BOOL logged;

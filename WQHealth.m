@@ -105,6 +105,10 @@ NSArray<WQHealthCheck *> *wq_health_run(void (^stage)(NSString *))
                               (unsigned long)sample.count, [refused componentsJoinedByString:@", "]);
     [checks addObject:wq_check(@"Sandbox access", access,
         access == WQHealthSkipped ? WQLocalized(@"Nothing to check.")
+        // On a supported iOS the technique works; a failure there is local
+        // (access cache, another app in the same App Group), not "iOS".
+        : access == WQHealthFailed && (os.majorVersion == 26 || os.majorVersion == 27)
+            ? WQLocalizedFormat(@"None of %lu sampled app folders could be opened, even after repairing the access cache. Another app that shares WQ Files' App Group (for example in LiveContainer) can get in the way: close it, then tap Reset Access Cache and Try Again. If it stays like this, send the Log.", (unsigned long)sample.count)
         : access == WQHealthFailed ? WQLocalizedFormat(@"None of %lu sampled app folders could be opened: the sandbox escape doesn't work on iOS %@.", (unsigned long)sample.count, osText)
         : WQLocalizedFormat(@"%lu of %lu sampled app folders open.", (unsigned long)opened, (unsigned long)sample.count))];
 

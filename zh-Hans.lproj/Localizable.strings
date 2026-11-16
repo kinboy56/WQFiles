@@ -1070,3 +1070,4 @@
 "Empty Folder" = "空文件夹";
 "There are no files or folders in here." = "这里没有文件或文件夹。";
 "Empty" = "空";
+"None of %lu sampled app folders could be opened, even after repairing the access cache. Another app that shares WQ Files' App Group (for example in LiveContainer) can get in the way: close it, then tap Reset Access Cache and Try Again. If it stays like this, send the Log." = "抽查的 %lu 个应用文件夹都无法打开，即使已修复访问缓存。与 WQ Files 共用 App Group 的其他应用（例如 LiveContainer 中的应用）可能造成干扰：请关闭它，然后轻点“重置访问缓存”和“重试”。如果仍然如此，请发送日志。";

@@ -1070,3 +1070,4 @@
 "Empty Folder" = "Pusty folder";
 "There are no files or folders in here." = "Nie ma tu plików ani folderów.";
 "Empty" = "Pusty";
+"None of %lu sampled app folders could be opened, even after repairing the access cache. Another app that shares WQ Files' App Group (for example in LiveContainer) can get in the way: close it, then tap Reset Access Cache and Try Again. If it stays like this, send the Log." = "Nie udało się otworzyć żadnego z %lu sprawdzonych folderów aplikacji, nawet po naprawie pamięci podręcznej dostępu. Może przeszkadzać inna aplikacja współdzieląca App Group WQ Files (np. w LiveContainer): zamknij ją, potem stuknij Resetuj pamięć dostępu i Spróbuj ponownie. Jeśli nic się nie zmieni, wyślij Log.";

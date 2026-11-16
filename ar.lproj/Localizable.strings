@@ -1066,3 +1066,4 @@
 "Empty Folder" = "مجلد فارغ";
 "There are no files or folders in here." = "لا توجد ملفات أو مجلدات هنا.";
 "Empty" = "فارغ";
+"None of %lu sampled app folders could be opened, even after repairing the access cache. Another app that shares WQ Files' App Group (for example in LiveContainer) can get in the way: close it, then tap Reset Access Cache and Try Again. If it stays like this, send the Log." = "تعذّر فتح أي من مجلدات التطبيقات الـ %lu التي جرى فحصها، حتى بعد إصلاح ذاكرة الوصول المؤقتة. قد يتداخل تطبيق آخر يشارك App Group الخاصة بـ WQ Files (مثلًا في LiveContainer): أغلقه، ثم اضغط إعادة تعيين ذاكرة الوصول المؤقتة وإعادة المحاولة. إن بقي الأمر كذلك، أرسل السجل.";
