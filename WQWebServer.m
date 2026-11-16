@@ -314,9 +314,15 @@ static BOOL WQWebSend(int fd, const void *bytes, size_t length)
                  head:isHead extra:@{@"WWW-Authenticate": @"Basic realm=\"WQ Files\", charset=\"UTF-8\""}];
         return;
     }
+    if ([method isEqualToString:@"PUT"]) {
+        NSUInteger bodyStart = end.location + 4;
+        [self handleUpload:fd target:target headers:headers
+                     early:[buffer subdataWithRange:NSMakeRange(bodyStart, buffer.length - bodyStart)]];
+        return;
+    }
     if (!isHead && ![method isEqualToString:@"GET"]) {
-        [self respond:fd status:405 type:@"text/plain" body:[@"Read-only" dataUsingEncoding:NSUTF8StringEncoding]
-                 head:NO extra:@{@"Allow": @"GET, HEAD"}];
+        [self respond:fd status:405 type:@"text/plain" body:[@"Not allowed" dataUsingEncoding:NSUTF8StringEncoding]
+                 head:NO extra:@{@"Allow": @"GET, HEAD, PUT"}];
         return;
     }
     NSString *query = @"";
@@ -329,6 +335,11 @@ static BOOL WQWebSend(int fd, const void *bytes, size_t length)
     void (^log)(NSString *) = self.requestHandler;
     if (log) dispatch_async(dispatch_get_main_queue(), ^{ log(line); });
 
+    if ([target isEqualToString:@"/app.js"]) {
+        [self respond:fd status:200 type:@"text/javascript; charset=utf-8" body:[kWQWebScript dataUsingEncoding:NSUTF8StringEncoding]
+                 head:isHead extra:nil];
+        return;
+    }
     if ([target isEqualToString:@"/"] || [target isEqualToString:@"/browse"]) {
         [self respond:fd status:302 type:@"text/plain" body:[NSData data] head:isHead extra:@{@"Location": @"/browse/"}];
         return;
@@ -354,7 +365,7 @@ static BOOL WQWebSend(int fd, const void *bytes, size_t length)
         }
         [self respond:fd status:200 type:@"text/html; charset=utf-8"
                  body:[[self pageFor:path components:components] dataUsingEncoding:NSUTF8StringEncoding] head:isHead
-                extra:@{@"Content-Security-Policy": @"default-src 'none'; style-src 'unsafe-inline'; img-src data:"}];
+                extra:@{@"Content-Security-Policy": @"default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'self'; connect-src 'self'"}];
     } else if ([route isEqualToString:@"/file/"]) {
         if (!S_ISREG(st.st_mode)) {
             [self respondError:fd status:404 message:WQLocalized(@"Not found.") head:isHead];
@@ -369,6 +380,82 @@ static BOOL WQWebSend(int fd, const void *bytes, size_t length)
         }
         [self sendZip:fd path:path components:components head:isHead];
     }
+}
+
+#pragma mark Uploads
+
+// PUT /upload/<folder>/<name>, raw file bytes as the body. The page sends an
+// X-WQ-Upload header: a custom header makes browsers ask first (CORS
+// preflight, which this server never allows), so other web sites can't upload.
+- (void)handleUpload:(int)fd target:(NSString *)target headers:(NSDictionary<NSString *, NSString *> *)headers early:(NSData *)early
+{
+    void (^reply)(int, NSString *) = ^(int status, NSString *text) {
+        [self respond:fd status:status type:@"text/plain; charset=utf-8" body:[text dataUsingEncoding:NSUTF8StringEncoding] head:NO extra:nil];
+    };
+    NSRange q = [target rangeOfString:@"?"];
+    if (q.location != NSNotFound) target = [target substringToIndex:q.location];
+    if (!self.allowUploads) { reply(403, WQLocalized(@"Uploads are off.")); return; }
+    if (![headers[@"x-wq-upload"] isEqualToString:@"1"] || ![target hasPrefix:@"/upload/"]) { reply(403, @"Forbidden"); return; }
+    NSArray<NSString *> *components = WQWebPathComponents([target substringFromIndex:8]);
+    NSString *name = components.lastObject;
+    if (!name.length || strlen(name.fileSystemRepresentation) > 255) { reply(400, WQLocalized(@"Not found.")); return; }
+    NSArray<NSString *> *dirComponents = [components subarrayWithRange:NSMakeRange(0, components.count - 1)];
+    struct stat st;
+    NSString *dir = (!dirComponents.count && _entries) ? nil : [self resolve:dirComponents stat:&st];   // not into a container root
+    if (!dir || !S_ISDIR(st.st_mode)) { reply(404, WQLocalized(@"Not found.")); return; }
+    NSString *lengthText = headers[@"content-length"];
+    if (!lengthText.length || headers[@"transfer-encoding"]) { reply(411, @"Length Required"); return; }
+    long long length = lengthText.longLongValue;
+    if (length < 0) { reply(400, @"Bad Request"); return; }
+    if ([headers[@"expect"].lowercaseString isEqualToString:@"100-continue"]) {
+        static const char cont[] = "HTTP/1.1 100 Continue\r\n\r\n";
+        WQWebSend(fd, cont, sizeof cont - 1);
+    }
+    NSString *temp = [NSTemporaryDirectory() stringByAppendingPathComponent:[@"WQUpload-" stringByAppendingString:NSUUID.UUID.UUIDString]];
+    int out = open(temp.fileSystemRepresentation, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    if (out < 0) { reply(500, @(strerror(errno))); return; }
+    unsigned long long remaining = (unsigned long long)length;
+    BOOL ok = YES;
+    int writeError = 0;
+    NSUInteger first = (NSUInteger)MIN((unsigned long long)early.length, remaining);
+    if (first && write(out, early.bytes, first) != (ssize_t)first) { ok = NO; writeError = errno; }
+    remaining -= first;
+    char *chunk = malloc(kWQWebChunk);
+    while (ok && remaining > 0 && !_stopped) {
+        ssize_t n = recv(fd, chunk, (size_t)MIN((unsigned long long)kWQWebChunk, remaining), 0);
+        if (n < 0 && errno == EINTR) continue;
+        if (n <= 0) { ok = NO; break; }
+        if (write(out, chunk, (size_t)n) != n) { ok = NO; writeError = errno; break; }
+        remaining -= (unsigned long long)n;
+    }
+    free(chunk);
+    close(out);
+    if (!ok || remaining > 0) {
+        unlink(temp.fileSystemRepresentation);
+        if (writeError == ENOSPC) reply(507, WQLocalized(@"Not enough space on this device."));
+        else if (writeError) reply(500, @(strerror(writeError)));
+        return;   // the browser went away
+    }
+    // Never overwrite: "name.ext", then "name 2.ext", "name 3.ext"…
+    NSString *base = name.stringByDeletingPathExtension, *ext = name.pathExtension;
+    NSString *finalName = nil, *error = nil;
+    for (NSUInteger i = 1; i < 1000 && !finalName; i++) {
+        NSString *candidate = i == 1 ? name : [NSString stringWithFormat:@"%@ %lu", base, (unsigned long)i];
+        if (i > 1 && ext.length) candidate = [candidate stringByAppendingPathExtension:ext];
+        NSString *path = [dir stringByAppendingPathComponent:candidate];
+        struct stat existing;
+        if (wq_stat(path, &existing)) continue;
+        if (wq_create_file_from(path, temp, &error)) finalName = candidate;
+        else if (errno != EEXIST) break;
+    }
+    unlink(temp.fileSystemRepresentation);
+    if (!finalName) { reply(500, WQLocalizedFormat(@"Upload failed: %@", error ?: @"?")); return; }
+    wq_log(@"wifi sharing: uploaded %@ (%lld bytes) to %@", finalName, length, dir);
+    NSString *line = [NSString stringWithFormat:@"PUT %@", [[@"/" stringByAppendingString:[dirComponents componentsJoinedByString:@"/"]] stringByAppendingPathComponent:finalName]];
+    void (^log)(NSString *) = self.requestHandler;
+    if (log) dispatch_async(dispatch_get_main_queue(), ^{ log(line); });
+    NSData *json = [NSJSONSerialization dataWithJSONObject:@{@"name": finalName} options:0 error:nil];
+    [self respond:fd status:201 type:@"application/json" body:json head:NO extra:nil];
 }
 
 - (BOOL)authorized:(NSString *)header
@@ -410,7 +497,7 @@ static BOOL WQWebSend(int fd, const void *bytes, size_t length)
 - (void)respond:(int)fd status:(int)status type:(NSString *)type body:(NSData *)body head:(BOOL)head
           extra:(nullable NSDictionary<NSString *, NSString *> *)extra
 {
-    NSDictionary *reasons = @{@200: @"OK", @206: @"Partial Content", @302: @"Found", @400: @"Bad Request", @401: @"Unauthorized",
+    NSDictionary *reasons = @{@200: @"OK", @201: @"Created", @206: @"Partial Content", @411: @"Length Required", @507: @"Insufficient Storage", @302: @"Found", @400: @"Bad Request", @401: @"Unauthorized",
                               @403: @"Forbidden", @404: @"Not Found", @405: @"Method Not Allowed", @416: @"Range Not Satisfiable",
                               @431: @"Request Header Fields Too Large", @500: @"Internal Server Error"};
     NSMutableString *h = [NSMutableString stringWithFormat:@"HTTP/1.1 %d %@\r\nContent-Type: %@\r\nContent-Length: %lu\r\n"
@@ -590,6 +677,29 @@ static NSString *WQWebDisposition(NSString *kind, NSString *name)
     return items;
 }
 
+// Upload: Upload Files button and drag and drop, one PUT per file with a
+// progress bar; texts come from data- attributes so they are translated.
+static NSString *const kWQWebScript =
+    @"(function(){var b=document.body,base=b.dataset.upload;if(!base)return;"
+    "var input=document.getElementById('wq-up'),box=document.getElementById('wq-box'),"
+    "label=document.getElementById('wq-label'),bar=document.getElementById('wq-bar');"
+    "function fmt(t,v){return t.replace('%@',v);}"
+    "function send(files,i){if(i>=files.length){label.textContent=b.dataset.done;setTimeout(function(){location.reload();},700);return;}"
+    "var f=files[i],x=new XMLHttpRequest();box.hidden=false;bar.value=0;"
+    "label.textContent=fmt(b.dataset.uploading,f.name)+(files.length>1?' ('+(i+1)+'/'+files.length+')':'');"
+    "x.open('PUT',base+encodeURIComponent(f.name));x.setRequestHeader('X-WQ-Upload','1');"
+    "x.upload.onprogress=function(e){if(e.lengthComputable)bar.value=e.loaded/e.total;};"
+    "x.onload=function(){if(x.status>=200&&x.status<300)send(files,i+1);else label.textContent=fmt(b.dataset.failed,x.responseText||x.status);};"
+    "x.onerror=function(){label.textContent=fmt(b.dataset.failed,'network');};x.send(f);}"
+    "input.addEventListener('change',function(){if(input.files.length)send(Array.prototype.slice.call(input.files),0);});"
+    "document.addEventListener('dragover',function(e){e.preventDefault();b.classList.add('drag');});"
+    "document.addEventListener('dragleave',function(e){if(!e.relatedTarget)b.classList.remove('drag');});"
+    "document.addEventListener('drop',function(e){e.preventDefault();b.classList.remove('drag');"
+    "var fs=Array.prototype.slice.call(e.dataTransfer.files||[]);if(fs.length)send(fs,0);});})();";
+
+static NSString *const kWQWebUploadIcon =
+    @"<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M12 21a1 1 0 0 1-1-1v-9.6l-3.3 3.3a1 1 0 1 1-1.4-1.4l5-5a1 1 0 0 1 1.4 0l5 5a1 1 0 1 1-1.4 1.4L13 10.4V20a1 1 0 0 1-1 1zM5 5a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1z\"/></svg>";
+
 static NSString *const kWQWebFolderIcon =
     @"<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M3 6.5A2.5 2.5 0 0 1 5.5 4h3.6c.6 0 1.2.25 1.6.7L12 6h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z\"/></svg>";
 static NSString *const kWQWebFileIcon =
@@ -648,7 +758,12 @@ static NSString *WQWebTone(WQWebItem *item)
         ".off{opacity:.45}"
         ".empty{padding:22px 18px;color:var(--sub);text-align:center}"
         ".foot{margin-top:18px;font-size:12.5px;color:var(--sub);text-align:center}"
-        "@media (hover:hover){a.main:hover .name{text-decoration:underline}.act:hover,.pill:hover{filter:brightness(1.1)}}"];
+        "@media (hover:hover){a.main:hover .name{text-decoration:underline}.act:hover,.pill:hover{filter:brightness(1.1)}}"
+        "label.pill{cursor:pointer}#wq-up{position:absolute;width:1px;height:1px;opacity:0}"
+        ".upbox{margin:0 0 16px;padding:12px 16px;border-radius:var(--radius);background:var(--card);border:1px solid var(--stroke)}"
+        ".upbox[hidden]{display:none}.upbox progress{width:100%;height:6px;margin-top:8px;accent-color:var(--accent)}"
+        ".hint{font-size:13px;color:var(--sub);margin:-6px 0 14px}"
+        "body.drag .list{outline:2px dashed var(--accent);outline-offset:4px}"];
     if (!prism) {
         // Classic design: iOS grouped list.
         [css appendString:
@@ -690,13 +805,25 @@ static NSString *WQWebTone(WQWebItem *item)
 
 - (NSString *)pageShellWithTitle:(NSString *)title body:(NSString *)body
 {
+    return [self pageShellWithTitle:title body:body upload:nil];
+}
+
+- (NSString *)pageShellWithTitle:(NSString *)title body:(NSString *)body upload:(nullable NSString *)uploadBase
+{
+    NSString *attributes = @"", *script = @"";
+    if (uploadBase) {
+        attributes = [NSString stringWithFormat:@" data-upload=\"%@\" data-uploading=\"%@\" data-done=\"%@\" data-failed=\"%@\"",
+                      WQWebHTMLEscape(uploadBase), WQWebHTMLEscape(WQLocalized(@"Uploading %@…")),
+                      WQWebHTMLEscape(WQLocalized(@"Uploaded.")), WQWebHTMLEscape(WQLocalized(@"Upload failed: %@"))];
+        script = @"<script src=\"/app.js\"></script>";
+    }
     return [NSString stringWithFormat:
         @"<!doctype html><html lang=\"%@\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex\">"
-        "<title>%@ · WQ Files</title><style>%@</style></head><body><div class=\"wrap\">"
-        "<div class=\"top\"><div class=\"brand\">WQ FILES · %@</div></div>%@</div></body></html>",
-        WQWebHTMLEscape(NSLocale.preferredLanguages.firstObject ?: @"en"), WQWebHTMLEscape(title), [self styleSheet],
-        WQWebHTMLEscape(WQLocalized(@"Read-only").uppercaseString), body];
+        "<title>%@ · WQ Files</title><style>%@</style></head><body%@><div class=\"wrap\">"
+        "<div class=\"top\"><div class=\"brand\">WQ FILES · %@</div></div>%@</div>%@</body></html>",
+        WQWebHTMLEscape(NSLocale.preferredLanguages.firstObject ?: @"en"), WQWebHTMLEscape(title), [self styleSheet], attributes,
+        WQWebHTMLEscape(WQLocalized(self.allowUploads ? @"Uploads on" : @"Read-only").uppercaseString), body, script];
 }
 
 - (NSString *)pageFor:(NSString *)path components:(NSArray<NSString *> *)components
@@ -720,8 +847,21 @@ static NSString *WQWebTone(WQWebItem *item)
                         components.count > 1 ? @"/" : @""];
         [body appendFormat:@"<a class=\"pill\" href=\"%@\">‹ %@</a>", up, WQWebHTMLEscape(WQLocalized(@"Up"))];
     }
-    [body appendFormat:@"<a class=\"pill\" href=\"/zip/%@\">%@ %@</a></div>", WQWebEncodePath(components), kWQWebDownloadIcon,
+    [body appendFormat:@"<a class=\"pill\" href=\"/zip/%@\">%@ %@</a>", WQWebEncodePath(components), kWQWebDownloadIcon,
                        WQWebHTMLEscape(WQLocalized(@"Download Folder as ZIP"))];
+    // Uploads go into real folders, not into a container root (App Data…).
+    NSString *uploadBase = nil;
+    if (self.allowUploads && items && !(!components.count && _entries)) {
+        uploadBase = [NSString stringWithFormat:@"/upload/%@%@", WQWebEncodePath(components), components.count ? @"/" : @""];
+        [body appendFormat:@"<label class=\"pill\" for=\"wq-up\">%@ %@</label><input id=\"wq-up\" type=\"file\" multiple>",
+                           kWQWebUploadIcon, WQWebHTMLEscape(WQLocalized(@"Upload Files…"))];
+    }
+    [body appendString:@"</div>"];
+    if (uploadBase) {
+        [body appendFormat:@"<div class=\"hint\">%@</div><div class=\"upbox\" id=\"wq-box\" hidden><div id=\"wq-label\"></div>"
+                           "<progress id=\"wq-bar\" max=\"1\" value=\"0\"></progress></div>",
+                           WQWebHTMLEscape(WQLocalized(@"Drop files here or use Upload Files. Nothing is overwritten."))];
+    }
     [body appendString:@"<div class=\"list\">"];
     if (!items) {
         [body appendFormat:@"<div class=\"empty\">%@</div>", WQWebHTMLEscape(WQLocalized(@"WQ Files can't open this folder."))];
@@ -758,9 +898,10 @@ static NSString *WQWebTone(WQWebItem *item)
         }
     }
     [body appendString:@"</div>"];
-    [body appendFormat:@"<div class=\"foot\">%@</div>", WQWebHTMLEscape(items ? WQLocalizedFormat(@"%lu items · read-only", (unsigned long)items.count)
+    [body appendFormat:@"<div class=\"foot\">%@</div>", WQWebHTMLEscape(items ? (self.allowUploads ? WQLocalizedFormat(@"%lu items", (unsigned long)items.count)
+                                                                                           : WQLocalizedFormat(@"%lu items · read-only", (unsigned long)items.count))
                                                                          : WQLocalized(@"Read-only"))];
-    return [self pageShellWithTitle:title body:body];
+    return [self pageShellWithTitle:title body:body upload:uploadBase];
 }
 
 @end
@@ -777,11 +918,13 @@ static NSString *WQWebTone(WQWebItem *item)
     NSString *_problem;
     NSMutableArray<NSString *> *_requests;
     UIImage *_qr;
+    BOOL _uploadable, _allowUploads;
 }
 
-- (instancetype)initWithRoot:(NSString *)root title:(NSString *)title entries:(NSArray<WQWebEntry *> *)entries
+- (instancetype)initWithRoot:(NSString *)root title:(NSString *)title entries:(NSArray<WQWebEntry *> *)entries uploadable:(BOOL)uploadable
 {
     if ((self = [super initWithStyle:UITableViewStyleInsetGrouped])) {
+        _uploadable = uploadable && !entries.count;   // container roots: only their containers' folders
         _root = [root copy];
         _folderTitle = [title copy];
         _entries = [entries copy];
@@ -837,6 +980,7 @@ static NSString *WQWebTone(WQWebItem *item)
     [_server stop];
     // A new server each time: a new password.
     _server = [[WQWebServer alloc] initWithRoot:_root title:_folderTitle rootEntries:_entries];
+    _server.allowUploads = _allowUploads;
     __weak typeof(self) weakSelf = self;
     _server.requestHandler = ^(NSString *line) {
         typeof(self) me = weakSelf;
@@ -890,7 +1034,7 @@ static NSString *WQWebTone(WQWebItem *item)
 {
     if (section == 0) return 1;
     if (section == 1) return _server.running ? 3 : 0;
-    if (section == 2) return _server.running ? 2 : 1;
+    if (section == 2) return _server.running ? (_uploadable ? 3 : 2) : 1;
     return _server.running ? (NSInteger)MAX(_requests.count, 1) : 0;
 }
 
@@ -902,7 +1046,9 @@ static NSString *WQWebTone(WQWebItem *item)
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
 {
     if (section != 2) return nil;
-    return WQLocalized(@"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Read-only: files can be opened and downloaded, nothing can be changed. Sharing stops when you close this screen or leave WQ Files, and the password changes each time.");
+    NSString *text = WQLocalized(@"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time.");
+    if (_uploadable) text = [text stringByAppendingFormat:@"\n\n%@", WQLocalized(@"Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”.")];
+    return text;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -967,9 +1113,27 @@ static NSString *WQWebTone(WQWebItem *item)
         cell.accessoryView.tintColor = UIColor.tertiaryLabelColor;
         return cell;
     }
+    if (indexPath.section == 2 && _server.running && _uploadable && indexPath.row == 1) {
+        c = [UIListContentConfiguration cellConfiguration];
+        c.text = WQLocalized(@"Allow Uploads");
+        c.image = [UIImage systemImageNamed:@"square.and.arrow.up"];
+        cell.contentConfiguration = c;
+        UISwitch *toggle = [UISwitch new];
+        toggle.on = _allowUploads;
+        __weak typeof(self) weakSelf = self;
+        [toggle addAction:[UIAction actionWithHandler:^(UIAction *action) {
+            typeof(self) me = weakSelf;
+            if (!me) return;
+            me->_allowUploads = ((UISwitch *)action.sender).isOn;
+            me->_server.allowUploads = me->_allowUploads;
+        }] forControlEvents:UIControlEventValueChanged];
+        cell.accessoryView = toggle;
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        return cell;
+    }
     if (indexPath.section == 2) {
         c = [UIListContentConfiguration cellConfiguration];
-        BOOL stop = _server.running && indexPath.row == 1;
+        BOOL stop = _server.running && indexPath.row == [self tableView:tableView numberOfRowsInSection:2] - 1;
         if (_server.running && indexPath.row == 0) {
             c.text = WQLocalized(@"Copy Address");
             c.image = [UIImage systemImageNamed:@"link"];
@@ -1001,16 +1165,19 @@ static NSString *WQWebTone(WQWebItem *item)
         [self copyText:values[(NSUInteger)indexPath.row]];
     } else if (indexPath.section == 2) {
         if (_server.running && indexPath.row == 0) [self copyText:_server.address];
-        else if (_server.running) { [self stopSharing]; _problem = nil; [tableView reloadData]; }
+        else if (_server.running && indexPath.row == [self tableView:tableView numberOfRowsInSection:2] - 1) {
+            [self stopSharing]; _problem = nil; [tableView reloadData];
+        }
+        else if (_server.running) return;   // the Allow Uploads switch row
         else [self startSharing];
     }
 }
 
 @end
 
-void wq_present_wifi_sharing(UIViewController *host, NSString *root, NSString *title, NSArray<WQWebEntry *> *rootEntries)
+void wq_present_wifi_sharing(UIViewController *host, NSString *root, NSString *title, NSArray<WQWebEntry *> *rootEntries, BOOL uploadable)
 {
-    WQWebShareViewController *share = [[WQWebShareViewController alloc] initWithRoot:root title:title entries:rootEntries];
+    WQWebShareViewController *share = [[WQWebShareViewController alloc] initWithRoot:root title:title entries:rootEntries uploadable:uploadable];
     UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:share];
     [host presentViewController:nav animated:YES completion:nil];
 }

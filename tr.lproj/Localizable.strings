@@ -994,7 +994,6 @@
 "Start Sharing" = "Paylaşımı Başlat";
 "Requests" = "İstekler";
 "No requests yet." = "Henüz istek yok.";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Read-only: files can be opened and downloaded, nothing can be changed. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Adresi aynı Wi-Fi ağındaki bir bilgisayar veya telefonda tarayıcıda açın ve kullanıcı adı ile parolayla giriş yapın. Salt okunur: dosyalar açılabilir ve indirilebilir, hiçbir şey değiştirilemez. Bu ekranı kapattığınızda veya WQ Files'tan çıktığınızda paylaşım durur ve parola her seferinde değişir.";
 "Sharing stopped because WQ Files went to the background." = "WQ Files arka plana geçtiği için paylaşım durdu.";
 "Sharing could not start." = "Paylaşım başlatılamadı.";
 "Not connected to Wi-Fi. Connect to a Wi-Fi network (or turn on Personal Hotspot) and try again." = "Wi-Fi'ye bağlı değil. Bir Wi-Fi ağına bağlanın (veya Kişisel Erişim Noktası'nı açın) ve tekrar deneyin.";
@@ -1009,3 +1008,14 @@
 "Download" = "İndir";
 "%lu items · read-only" = "%lu öğe · salt okunur";
 "Read-only" = "Salt okunur";
+"Uploads are off." = "Yüklemeler kapalı.";
+"Not enough space on this device." = "Bu cihazda yeterli alan yok.";
+"Upload failed: %@" = "Yükleme başarısız: %@";
+"Uploading %@…" = "%@ yükleniyor…";
+"Uploaded." = "Yüklendi.";
+"Uploads on" = "Yüklemeler açık";
+"Upload Files…" = "Dosya Yükle…";
+"Drop files here or use Upload Files. Nothing is overwritten." = "Dosyaları buraya bırakın veya Dosya Yükle'yi kullanın. Hiçbir şeyin üzerine yazılmaz.";
+"Allow Uploads" = "Yüklemelere İzin Ver";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Adresi aynı Wi-Fi ağındaki bir bilgisayar veya telefonda tarayıcıda açın ve kullanıcı adı ile parolayla giriş yapın. Dosyalar açılabilir ve indirilebilir. Bu ekranı kapattığınızda veya WQ Files'tan çıktığınızda paylaşım durur ve parola her seferinde değişir.";
+"Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "Yüklemelere İzin Ver: tarayıcı bu klasöre ve alt klasörlerine dosya ekleyebilir. Hiçbir şeyin üzerine yazılmaz veya silinmez: adı kullanılan bir dosya “ad 2” olarak kaydedilir.";

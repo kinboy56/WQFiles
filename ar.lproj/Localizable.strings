@@ -990,7 +990,6 @@
 "Start Sharing" = "بدء المشاركة";
 "Requests" = "الطلبات";
 "No requests yet." = "لا توجد طلبات بعد.";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Read-only: files can be opened and downloaded, nothing can be changed. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "افتح العنوان في متصفح على كمبيوتر أو هاتف متصل بنفس شبكة Wi-Fi وسجّل الدخول باسم المستخدم وكلمة السر. للقراءة فقط: يمكن فتح الملفات وتنزيلها، ولا يمكن تغيير أي شيء. تتوقف المشاركة عند إغلاق هذه الشاشة أو مغادرة WQ Files، وتتغير كلمة السر في كل مرة.";
 "Sharing stopped because WQ Files went to the background." = "توقفت المشاركة لأن WQ Files انتقل إلى الخلفية.";
 "Sharing could not start." = "تعذّر بدء المشاركة.";
 "Not connected to Wi-Fi. Connect to a Wi-Fi network (or turn on Personal Hotspot) and try again." = "غير متصل بشبكة Wi-Fi. اتصل بشبكة Wi-Fi (أو شغّل نقطة الاتصال الشخصية) ثم حاول مرة أخرى.";
@@ -1005,3 +1004,14 @@
 "Download" = "تنزيل";
 "%lu items · read-only" = "%lu عنصر · للقراءة فقط";
 "Read-only" = "للقراءة فقط";
+"Uploads are off." = "الرفع متوقف.";
+"Not enough space on this device." = "لا توجد مساحة كافية على هذا الجهاز.";
+"Upload failed: %@" = "فشل الرفع: %@";
+"Uploading %@…" = "جارٍ رفع %@…";
+"Uploaded." = "تم الرفع.";
+"Uploads on" = "الرفع مفعّل";
+"Upload Files…" = "رفع ملفات…";
+"Drop files here or use Upload Files. Nothing is overwritten." = "اسحب الملفات إلى هنا أو استخدم رفع ملفات. لا يُستبدل أي شيء.";
+"Allow Uploads" = "السماح بالرفع";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "افتح العنوان في متصفح على كمبيوتر أو هاتف متصل بنفس شبكة Wi-Fi وسجّل الدخول باسم المستخدم وكلمة السر. يمكن فتح الملفات وتنزيلها. تتوقف المشاركة عند إغلاق هذه الشاشة أو مغادرة WQ Files، وتتغير كلمة السر في كل مرة.";
+"Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "السماح بالرفع: يمكن للمتصفح إضافة ملفات إلى هذا المجلد ومجلداته الفرعية. لا يُستبدل أو يُحذف أي شيء: الملف الذي اسمه مستخدم يُحفظ باسم “الاسم 2”.";

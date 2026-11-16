@@ -994,7 +994,6 @@
 "Start Sharing" = "Iniciar compartilhamento";
 "Requests" = "Solicitações";
 "No requests yet." = "Nenhuma solicitação ainda.";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Read-only: files can be opened and downloaded, nothing can be changed. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Abra o endereço em um navegador em um computador ou celular na mesma rede Wi-Fi e entre com o usuário e a senha. Somente leitura: arquivos podem ser abertos e baixados, nada pode ser alterado. O compartilhamento para quando você fecha esta tela ou sai do WQ Files, e a senha muda a cada vez.";
 "Sharing stopped because WQ Files went to the background." = "O compartilhamento parou porque o WQ Files foi para o segundo plano.";
 "Sharing could not start." = "Não foi possível iniciar o compartilhamento.";
 "Not connected to Wi-Fi. Connect to a Wi-Fi network (or turn on Personal Hotspot) and try again." = "Sem conexão Wi-Fi. Conecte-se a uma rede Wi-Fi (ou ative o Acesso Pessoal) e tente novamente.";
@@ -1009,3 +1008,14 @@
 "Download" = "Baixar";
 "%lu items · read-only" = "%lu itens · somente leitura";
 "Read-only" = "Somente leitura";
+"Uploads are off." = "Os envios estão desativados.";
+"Not enough space on this device." = "Não há espaço suficiente neste dispositivo.";
+"Upload failed: %@" = "Falha no envio: %@";
+"Uploading %@…" = "Enviando %@…";
+"Uploaded." = "Enviado.";
+"Uploads on" = "Envios ativados";
+"Upload Files…" = "Enviar arquivos…";
+"Drop files here or use Upload Files. Nothing is overwritten." = "Arraste arquivos para cá ou use Enviar arquivos. Nada é substituído.";
+"Allow Uploads" = "Permitir envios";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Abra o endereço em um navegador em um computador ou celular na mesma rede Wi-Fi e entre com o usuário e a senha. Os arquivos podem ser abertos e baixados. O compartilhamento para quando você fecha esta tela ou sai do WQ Files, e a senha muda a cada vez.";
+"Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "Permitir envios: o navegador pode adicionar arquivos a esta pasta e às suas subpastas. Nada é substituído ou apagado: um arquivo com um nome já usado é salvo como “nome 2”.";

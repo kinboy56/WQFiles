@@ -990,7 +990,6 @@
 "Start Sharing" = "Avvia condivisione";
 "Requests" = "Richieste";
 "No requests yet." = "Ancora nessuna richiesta.";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Read-only: files can be opened and downloaded, nothing can be changed. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Apri l'indirizzo in un browser su un computer o telefono nella stessa rete Wi-Fi e accedi con utente e password. Sola lettura: i file si possono aprire e scaricare, nulla può essere modificato. La condivisione si interrompe quando chiudi questa schermata o esci da WQ Files, e la password cambia ogni volta.";
 "Sharing stopped because WQ Files went to the background." = "Condivisione interrotta perché WQ Files è passato in background.";
 "Sharing could not start." = "Impossibile avviare la condivisione.";
 "Not connected to Wi-Fi. Connect to a Wi-Fi network (or turn on Personal Hotspot) and try again." = "Non connesso al Wi-Fi. Connettiti a una rete Wi-Fi (o attiva l'hotspot personale) e riprova.";
@@ -1005,3 +1004,14 @@
 "Download" = "Scarica";
 "%lu items · read-only" = "%lu elementi · sola lettura";
 "Read-only" = "Sola lettura";
+"Uploads are off." = "I caricamenti sono disattivati.";
+"Not enough space on this device." = "Spazio insufficiente su questo dispositivo.";
+"Upload failed: %@" = "Caricamento non riuscito: %@";
+"Uploading %@…" = "Caricamento di %@…";
+"Uploaded." = "Caricato.";
+"Uploads on" = "Caricamenti attivi";
+"Upload Files…" = "Carica file…";
+"Drop files here or use Upload Files. Nothing is overwritten." = "Trascina qui i file o usa Carica file. Nulla viene sovrascritto.";
+"Allow Uploads" = "Consenti caricamenti";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Apri l'indirizzo in un browser su un computer o telefono nella stessa rete Wi-Fi e accedi con utente e password. I file si possono aprire e scaricare. La condivisione si interrompe quando chiudi questa schermata o esci da WQ Files, e la password cambia ogni volta.";
+"Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "Consenti caricamenti: il browser può aggiungere file a questa cartella e alle sue sottocartelle. Nulla viene sovrascritto o eliminato: un file con un nome già usato viene salvato come “nome 2”.";

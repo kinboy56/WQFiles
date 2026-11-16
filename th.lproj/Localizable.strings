@@ -994,7 +994,6 @@
 "Start Sharing" = "เริ่มแชร์";
 "Requests" = "คำขอ";
 "No requests yet." = "ยังไม่มีคำขอ";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Read-only: files can be opened and downloaded, nothing can be changed. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "เปิดที่อยู่นี้ในเบราว์เซอร์บนคอมพิวเตอร์หรือโทรศัพท์ที่ใช้ Wi-Fi เดียวกัน แล้วลงชื่อเข้าด้วยผู้ใช้และรหัสผ่าน อ่านอย่างเดียว: เปิดและดาวน์โหลดไฟล์ได้ แต่แก้ไขอะไรไม่ได้ การแชร์จะหยุดเมื่อคุณปิดหน้าจอนี้หรือออกจาก WQ Files และรหัสผ่านจะเปลี่ยนทุกครั้ง";
 "Sharing stopped because WQ Files went to the background." = "หยุดแชร์แล้วเพราะ WQ Files ไปทำงานเบื้องหลัง";
 "Sharing could not start." = "ไม่สามารถเริ่มแชร์ได้";
 "Not connected to Wi-Fi. Connect to a Wi-Fi network (or turn on Personal Hotspot) and try again." = "ไม่ได้เชื่อมต่อ Wi-Fi เชื่อมต่อเครือข่าย Wi-Fi (หรือเปิดฮอตสปอตส่วนบุคคล) แล้วลองอีกครั้ง";
@@ -1009,3 +1008,14 @@
 "Download" = "ดาวน์โหลด";
 "%lu items · read-only" = "%lu รายการ · อ่านอย่างเดียว";
 "Read-only" = "อ่านอย่างเดียว";
+"Uploads are off." = "ปิดการอัปโหลดอยู่";
+"Not enough space on this device." = "พื้นที่บนอุปกรณ์นี้ไม่พอ";
+"Upload failed: %@" = "อัปโหลดไม่สำเร็จ: %@";
+"Uploading %@…" = "กำลังอัปโหลด %@…";
+"Uploaded." = "อัปโหลดแล้ว";
+"Uploads on" = "เปิดการอัปโหลด";
+"Upload Files…" = "อัปโหลดไฟล์…";
+"Drop files here or use Upload Files. Nothing is overwritten." = "ลากไฟล์มาวางที่นี่หรือใช้อัปโหลดไฟล์ จะไม่มีการเขียนทับ";
+"Allow Uploads" = "อนุญาตการอัปโหลด";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "เปิดที่อยู่นี้ในเบราว์เซอร์บนคอมพิวเตอร์หรือโทรศัพท์ที่ใช้ Wi-Fi เดียวกัน แล้วลงชื่อเข้าด้วยผู้ใช้และรหัสผ่าน เปิดและดาวน์โหลดไฟล์ได้ การแชร์จะหยุดเมื่อคุณปิดหน้าจอนี้หรือออกจาก WQ Files และรหัสผ่านจะเปลี่ยนทุกครั้ง";
+"Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "อนุญาตการอัปโหลด: เบราว์เซอร์สามารถเพิ่มไฟล์ลงในโฟลเดอร์นี้และโฟลเดอร์ย่อย จะไม่มีการเขียนทับหรือลบ: ไฟล์ที่ชื่อซ้ำจะถูกบันทึกเป็น “ชื่อ 2”";

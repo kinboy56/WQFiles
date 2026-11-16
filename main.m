@@ -1484,7 +1484,7 @@ static NSString *wq_info_date(struct timespec ts)
         }
         entries = list;
     }
-    wq_present_wifi_sharing(self, _path, _baseTitle ?: _path.lastPathComponent, entries);
+    wq_present_wifi_sharing(self, _path, _baseTitle ?: _path.lastPathComponent, entries, !self.readOnly && !_backupStorage);
 }
 
 // Device strip, then the full path in normal-size text that wraps at the

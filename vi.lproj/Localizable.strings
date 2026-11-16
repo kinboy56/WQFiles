@@ -994,7 +994,6 @@
 "Start Sharing" = "Bắt đầu chia sẻ";
 "Requests" = "Yêu cầu";
 "No requests yet." = "Chưa có yêu cầu nào.";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Read-only: files can be opened and downloaded, nothing can be changed. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Mở địa chỉ trong trình duyệt trên máy tính hoặc điện thoại cùng mạng Wi-Fi và đăng nhập bằng người dùng và mật khẩu. Chỉ đọc: có thể mở và tải tệp, không thể thay đổi gì. Chia sẻ dừng khi bạn đóng màn hình này hoặc rời WQ Files, và mật khẩu thay đổi mỗi lần.";
 "Sharing stopped because WQ Files went to the background." = "Đã dừng chia sẻ vì WQ Files chuyển sang chạy nền.";
 "Sharing could not start." = "Không thể bắt đầu chia sẻ.";
 "Not connected to Wi-Fi. Connect to a Wi-Fi network (or turn on Personal Hotspot) and try again." = "Chưa kết nối Wi-Fi. Hãy kết nối mạng Wi-Fi (hoặc bật Điểm truy cập cá nhân) rồi thử lại.";
@@ -1009,3 +1008,14 @@
 "Download" = "Tải xuống";
 "%lu items · read-only" = "%lu mục · chỉ đọc";
 "Read-only" = "Chỉ đọc";
+"Uploads are off." = "Tải lên đang tắt.";
+"Not enough space on this device." = "Không đủ dung lượng trên thiết bị này.";
+"Upload failed: %@" = "Tải lên thất bại: %@";
+"Uploading %@…" = "Đang tải lên %@…";
+"Uploaded." = "Đã tải lên.";
+"Uploads on" = "Đang bật tải lên";
+"Upload Files…" = "Tải tệp lên…";
+"Drop files here or use Upload Files. Nothing is overwritten." = "Thả tệp vào đây hoặc dùng Tải tệp lên. Không ghi đè tệp nào.";
+"Allow Uploads" = "Cho phép tải lên";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Mở địa chỉ trong trình duyệt trên máy tính hoặc điện thoại cùng mạng Wi-Fi và đăng nhập bằng người dùng và mật khẩu. Có thể mở và tải tệp xuống. Chia sẻ dừng khi bạn đóng màn hình này hoặc rời WQ Files, và mật khẩu thay đổi mỗi lần.";
+"Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "Cho phép tải lên: trình duyệt có thể thêm tệp vào thư mục này và các thư mục con. Không ghi đè hay xóa gì: tệp trùng tên được lưu thành “tên 2”.";

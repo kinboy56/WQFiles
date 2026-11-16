@@ -4,9 +4,10 @@
 //
 //  Wi-Fi sharing (issue #30): a small read-only web server for one folder.
 //  A browser on the same Wi-Fi lists the folder, opens and downloads files and
-//  downloads folders as ZIP. Password protected (HTTP Basic, a new random
-//  password each start), bound to the Wi-Fi address only, nothing can be
-//  changed. The page follows the app's design settings.
+//  downloads folders as ZIP, and (when switched on) uploads files. Password
+//  protected (HTTP Basic, a new random password each start), bound to the
+//  Wi-Fi address only; nothing is ever overwritten or deleted. The page
+//  follows the app's design settings.
 //
 
 #import <UIKit/UIKit.h>
@@ -33,6 +34,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly, nullable) NSString *address;   // http://192.168.1.20:8080/
 @property (nonatomic, readonly) NSString *user;
 @property (nonatomic, readonly) NSString *password;
+// Uploads (PUT from the page's Upload button or drag and drop) into the
+// shared folder and its subfolders. Off by default; never overwrites, a taken
+// name gets " 2", " 3"… Settable while running.
+@property (atomic) BOOL allowUploads;
 // Called on the main queue for each served request ("GET /browse/…").
 @property (nonatomic, copy, nullable) void (^requestHandler)(NSString *line);
 @end
@@ -41,7 +46,7 @@ NS_ASSUME_NONNULL_BEGIN
 // code, user and password, recent requests. Stops when closed or when WQ Files
 // goes to the background.
 void wq_present_wifi_sharing(UIViewController *host, NSString *root, NSString *title,
-                             NSArray<WQWebEntry *> *_Nullable rootEntries);
+                             NSArray<WQWebEntry *> *_Nullable rootEntries, BOOL uploadable);
 
 // Exposed for tests: maps a URL path below a route ("Documents/a%20b.txt")
 // to path components, or nil when it would leave the folder.

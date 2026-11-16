@@ -994,7 +994,6 @@
 "Start Sharing" = "Открыть доступ";
 "Requests" = "Запросы";
 "No requests yet." = "Запросов пока нет.";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Read-only: files can be opened and downloaded, nothing can be changed. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Откройте адрес в браузере на компьютере или телефоне в той же сети Wi-Fi и войдите с этим пользователем и паролем. Только чтение: файлы можно открывать и скачивать, изменить ничего нельзя. Доступ закрывается, когда вы закрываете этот экран или выходите из WQ Files, а пароль каждый раз новый.";
 "Sharing stopped because WQ Files went to the background." = "Доступ остановлен, потому что WQ Files ушло в фон.";
 "Sharing could not start." = "Не удалось открыть доступ.";
 "Not connected to Wi-Fi. Connect to a Wi-Fi network (or turn on Personal Hotspot) and try again." = "Нет подключения к Wi-Fi. Подключитесь к сети Wi-Fi (или включите режим модема) и повторите попытку.";
@@ -1009,3 +1008,14 @@
 "Download" = "Скачать";
 "%lu items · read-only" = "Объектов: %lu · только чтение";
 "Read-only" = "Только чтение";
+"Uploads are off." = "Загрузка отключена.";
+"Not enough space on this device." = "Недостаточно места на устройстве.";
+"Upload failed: %@" = "Не удалось загрузить: %@";
+"Uploading %@…" = "Загрузка %@…";
+"Uploaded." = "Загружено.";
+"Uploads on" = "Загрузка включена";
+"Upload Files…" = "Загрузить файлы…";
+"Drop files here or use Upload Files. Nothing is overwritten." = "Перетащите файлы сюда или нажмите «Загрузить файлы». Ничего не перезаписывается.";
+"Allow Uploads" = "Разрешить загрузку";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Откройте адрес в браузере на компьютере или телефоне в той же сети Wi-Fi и войдите с этим пользователем и паролем. Файлы можно открывать и скачивать. Доступ закрывается, когда вы закрываете этот экран или выходите из WQ Files, а пароль каждый раз новый.";
+"Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "Разрешить загрузку: браузер может добавлять файлы в эту папку и её подпапки. Ничего не перезаписывается и не удаляется: файл с уже занятым именем сохраняется как «имя 2».";

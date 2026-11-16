@@ -994,7 +994,6 @@
 "Start Sharing" = "开始共享";
 "Requests" = "请求";
 "No requests yet." = "暂无请求。";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Read-only: files can be opened and downloaded, nothing can be changed. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "在同一 Wi-Fi 下的电脑或手机浏览器中打开该地址，并使用用户名和密码登录。只读：可以打开和下载文件，无法进行任何更改。关闭此页面或离开 WQ Files 时共享会停止，且每次的密码都不同。";
 "Sharing stopped because WQ Files went to the background." = "WQ Files 进入后台，共享已停止。";
 "Sharing could not start." = "无法开始共享。";
 "Not connected to Wi-Fi. Connect to a Wi-Fi network (or turn on Personal Hotspot) and try again." = "未连接 Wi-Fi。请连接 Wi-Fi 网络（或打开个人热点）后重试。";
@@ -1009,3 +1008,14 @@
 "Download" = "下载";
 "%lu items · read-only" = "%lu 个项目 · 只读";
 "Read-only" = "只读";
+"Uploads are off." = "上传已关闭。";
+"Not enough space on this device." = "此设备空间不足。";
+"Upload failed: %@" = "上传失败：%@";
+"Uploading %@…" = "正在上传 %@…";
+"Uploaded." = "已上传。";
+"Uploads on" = "已开启上传";
+"Upload Files…" = "上传文件…";
+"Drop files here or use Upload Files. Nothing is overwritten." = "将文件拖到此处或使用“上传文件”。不会覆盖任何文件。";
+"Allow Uploads" = "允许上传";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "在同一 Wi-Fi 下的电脑或手机浏览器中打开该地址，并使用用户名和密码登录。可以打开和下载文件。关闭此页面或离开 WQ Files 时共享会停止，且每次的密码都不同。";
+"Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "允许上传：浏览器可以向此文件夹及其子文件夹添加文件。不会覆盖或删除任何内容：重名的文件将保存为“名称 2”。";

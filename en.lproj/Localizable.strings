@@ -994,7 +994,6 @@
 "Start Sharing" = "Start Sharing";
 "Requests" = "Requests";
 "No requests yet." = "No requests yet.";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Read-only: files can be opened and downloaded, nothing can be changed. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Read-only: files can be opened and downloaded, nothing can be changed. Sharing stops when you close this screen or leave WQ Files, and the password changes each time.";
 "Sharing stopped because WQ Files went to the background." = "Sharing stopped because WQ Files went to the background.";
 "Sharing could not start." = "Sharing could not start.";
 "Not connected to Wi-Fi. Connect to a Wi-Fi network (or turn on Personal Hotspot) and try again." = "Not connected to Wi-Fi. Connect to a Wi-Fi network (or turn on Personal Hotspot) and try again.";
@@ -1009,3 +1008,14 @@
 "Download" = "Download";
 "%lu items · read-only" = "%lu items · read-only";
 "Read-only" = "Read-only";
+"Uploads are off." = "Uploads are off.";
+"Not enough space on this device." = "Not enough space on this device.";
+"Upload failed: %@" = "Upload failed: %@";
+"Uploading %@…" = "Uploading %@…";
+"Uploaded." = "Uploaded.";
+"Uploads on" = "Uploads on";
+"Upload Files…" = "Upload Files…";
+"Drop files here or use Upload Files. Nothing is overwritten." = "Drop files here or use Upload Files. Nothing is overwritten.";
+"Allow Uploads" = "Allow Uploads";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time.";
+"Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”.";
