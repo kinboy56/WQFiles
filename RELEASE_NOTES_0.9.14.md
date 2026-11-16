@@ -12,6 +12,7 @@
 
 ## Fixes
 
+- **WQ Files is back in the Files app** (build 99): since 0.9.12, On My iPhone no longer listed WQ Files, so Backups and AppBackups couldn't be copied out. They can be again, e.g. to keep app backups somewhere safe before reinstalling WQ Files.
 - **Wrong app names on iOS 26.5:** some apps were named after a file type they open, e.g. UC Browser as "셸 스크립트" (Shell Script) or Apple helpers with names in Telugu or Catalan. Names now come only from the app's own record.
 - **Crash Logs "can't be fully measured":** WQ Files looked for crash logs in a folder that doesn't exist. It now looks where iOS keeps them. Where iOS doesn't let WQ Files read them (iOS 27.0.1), the section is left out instead of showing that note on every scan.
 - **Faster measuring:** a folder that refused access was asked for access again and again during a scan. That's limited now. Files removed while a scan runs no longer make a size "incomplete", and the Log names what limited a measurement.
@@ -20,4 +21,4 @@
 
 New design: GpGp700. Sandbox technique: [worse_query](https://github.com/forcequitOS/worse_query) by Taj C (forcequit). Container enumeration: [KAMUI](https://github.com/murk-sus/kamui-escape) by murk-sus. Resumable scans: hhh2210. Translations: iosrxwy (Simplified Chinese), hfip (Arabic), hooray804 (Korean), Reinascape (Russian), romlayvn-93 (Vietnamese), buraakkcayir (Turkish review). Thanks to everyone who sent screenshots and Logs. GPL-3.0-or-later.
 
-SHA-256 of WQFiles.ipa: `01e3bfca48cee88315b36157fd5df1a5145feb28f6e0b1302f6d37b9fffd3512`
+SHA-256 of WQFiles.ipa: `e38f44692ab79989660b39920b430864aa749e825ab08282b500675ca9846926`
