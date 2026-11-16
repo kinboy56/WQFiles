@@ -332,7 +332,9 @@ dispatch_queue_t wq_scan_queue(void)
     static dispatch_queue_t queue;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
-        queue = dispatch_queue_create("wqfiles.scans", dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_UTILITY, 0));
+        // User-initiated: someone is waiting for the list. Utility (0.9.11)
+        // put scans on the efficiency cores with throttled disk I/O.
+        queue = dispatch_queue_create("wqfiles.scans", dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_USER_INITIATED, 0));
     });
     return queue;
 }

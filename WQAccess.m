@@ -3205,10 +3205,15 @@ static NSArray *wq_measure_identity(const struct stat *st)
 
 // Measurement progress is saved at most this often (the recovery tests save
 // after every directory to cover a kill right after the first one).
+// One trip to the mutation queue measures directories for up to this long
+// (one directory per trip in the tests), so writes can still run in between
+// without a queue hop for every directory.
 #ifdef WQ_ACCESS_TESTING
 static const NSTimeInterval kWQMeasureSaveInterval = 0;
+static const NSTimeInterval kWQMeasureSlice = 0;
 #else
 static const NSTimeInterval kWQMeasureSaveInterval = 20.0;
+static const NSTimeInterval kWQMeasureSlice = 0.05;
 #endif
 
 WQMeasureResult wq_measure_tree_resumable(NSString *dir, NSString *scope, NSString *taskID,
@@ -3240,38 +3245,43 @@ WQMeasureResult wq_measure_tree_resumable(NSString *dir, NSString *scope, NSStri
     NSTimeInterval lastSave = NSDate.date.timeIntervalSinceReferenceDate;
     while (pending.count) {
         if (!wq_scan_wait(cancellation)) return WQMeasureResultCancelled;
-        NSString *path = pending.lastObject;
-        __block unsigned long long directoryBytes = 0;
-        NSMutableArray *children = [NSMutableArray new];
-        __block BOOL directoryLimited = NO;
-        // Only this bounded directory step occupies the mutation queue. Never
-        // hold a descriptor or a sandbox token across a saved checkpoint.
+        // A slice of directories per trip to the mutation queue. Never hold a
+        // descriptor or a sandbox token across a saved checkpoint.
         performIO(^{
-            if (cancellation.isCancelled) return;
-            int fd = WQOpenDirectoryNoLinksFlags(path, O_RDONLY);
-            if (fd < 0 && wq_is_denied(errno) && wq_grant(path)) fd = WQOpenDirectoryNoLinksFlags(path, O_RDONLY);
-            DIR *stream = fd >= 0 ? fdopendir(fd) : NULL;
-            if (!stream) { if (fd >= 0) close(fd); directoryLimited = YES; return; }
-            struct dirent *entry;
-            errno = 0;
-            while ((entry = readdir(stream))) {
-                if (cancellation.isCancelled) break;
-                if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) continue;
-                struct stat st;
-                if (fstatat(fd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW) != 0) { directoryLimited = YES; errno = 0; continue; }
-                NSString *name = [NSFileManager.defaultManager stringWithFileSystemRepresentation:entry->d_name length:strlen(entry->d_name)];
-                if (S_ISREG(st.st_mode)) directoryBytes += (unsigned long long)MAX((off_t)0, st.st_size);
-                else if (S_ISDIR(st.st_mode) && name) [children addObject:[path stringByAppendingPathComponent:name]];
+            CFAbsoluteTime sliceStart = CFAbsoluteTimeGetCurrent();
+            do {
+                if (cancellation.isCancelled) return;
+                NSString *path = pending.lastObject;
+                [pending removeLastObject];
+                // Opened directly: the children come from this walk (lstat
+                // types), so a component can only be a link after a swap, and
+                // measuring never writes. Walking every path from "/" again
+                // cost about ten opens per directory.
+                int fd = open(path.fileSystemRepresentation, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+                if (fd < 0 && wq_is_denied(errno) && wq_grant(path))
+                    fd = open(path.fileSystemRepresentation, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+                DIR *stream = fd >= 0 ? fdopendir(fd) : NULL;
+                if (!stream) { if (fd >= 0) close(fd); limited = YES; continue; }
+                struct dirent *entry;
                 errno = 0;
-            }
-            if (errno) directoryLimited = YES;
-            closedir(stream);
+                while ((entry = readdir(stream))) {
+                    if (cancellation.isCancelled) break;
+                    if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) continue;
+                    if (entry->d_type == DT_LNK) continue;
+                    struct stat st;
+                    if (fstatat(fd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW) != 0) { limited = YES; errno = 0; continue; }
+                    if (S_ISREG(st.st_mode)) total += (unsigned long long)MAX((off_t)0, st.st_size);
+                    else if (S_ISDIR(st.st_mode)) {
+                        NSString *name = [NSFileManager.defaultManager stringWithFileSystemRepresentation:entry->d_name length:strlen(entry->d_name)];
+                        if (name) [pending addObject:[path stringByAppendingPathComponent:name]];
+                    }
+                    errno = 0;
+                }
+                if (errno) limited = YES;
+                closedir(stream);
+            } while (pending.count && CFAbsoluteTimeGetCurrent() - sliceStart < kWQMeasureSlice);
         });
         if (cancellation.isCancelled) return WQMeasureResultCancelled;
-        [pending removeLastObject];
-        [pending addObjectsFromArray:children];
-        total += directoryBytes;
-        limited |= directoryLimited;
         NSTimeInterval now = NSDate.date.timeIntervalSinceReferenceDate;
         if (pending.count && now - lastSave >= kWQMeasureSaveInterval) {
             if (!WQScanJournalSave(key, @{@"task": taskID, @"identity": identity, @"pending": pending,
