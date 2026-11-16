@@ -885,6 +885,21 @@ static NSDictionary<NSString *, NSNumber *> *wq_identity_at(NSArray *identities,
 }
 
 // ZIP reading and writing through WQAccess, so other apps' files work too.
+// Go to Path: a path on the clipboard, else the last one opened here, else
+// empty with an example (/private/var itself can't be opened, so it was a
+// useless default).
+static NSString *const kWQLastGoToPathPref = @"WQLastGoToPath";
+
+static void wq_go_to_path_prefill(UITextField *field)
+{
+    NSString *clip = UIPasteboard.generalPasteboard.hasStrings ? UIPasteboard.generalPasteboard.string : nil;
+    clip = [clip stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    NSString *last = [NSUserDefaults.standardUserDefaults stringForKey:kWQLastGoToPathPref];
+    if ([clip hasPrefix:@"/"] && ![clip containsString:@"\n"]) field.text = clip;
+    else if ([last hasPrefix:@"/"]) field.text = last;
+    field.placeholder = @"/private/var/mobile/Containers/Data/Application/…";
+}
+
 static WQArchiveIO *wq_app_archive_io(void)
 {
     WQArchiveIO *io = [WQArchiveIO new];
@@ -4905,8 +4920,7 @@ static void wq_apply_design(void);
 {
     UIAlertController *alert = wq_alert_controller(@"Go to Path", @"A folder or file path", UIAlertControllerStyleAlert);
     [alert addTextFieldWithConfigurationHandler:^(UITextField *f) {
-        f.text = UIPasteboard.generalPasteboard.hasStrings && [UIPasteboard.generalPasteboard.string hasPrefix:@"/"]
-            ? UIPasteboard.generalPasteboard.string : @"/private/var/";
+        wq_go_to_path_prefill(f);
         f.autocapitalizationType = UITextAutocapitalizationTypeNone;
         f.autocorrectionType = UITextAutocorrectionTypeNo;
         f.clearButtonMode = UITextFieldViewModeAlways;
@@ -4916,6 +4930,7 @@ static void wq_apply_design(void);
     [alert addAction:wq_alert_action(@"Open", UIAlertActionStyleDefault, ^(UIAlertAction *__unused a) {
         NSString *path = alert.textFields.firstObject.text.stringByStandardizingPath;
         if (![path hasPrefix:@"/"]) return;
+        [NSUserDefaults.standardUserDefaults setObject:path forKey:kWQLastGoToPathPref];
         dispatch_async(wq_io(), ^{
             struct stat st;
             BOOL exists = wq_stat(path, &st);
@@ -5914,8 +5929,7 @@ static NSString *const kWQTroubleshootingFooter =
 {
     UIAlertController *alert = wq_alert_controller(@"Go to Path", @"A folder or file path", UIAlertControllerStyleAlert);
     [alert addTextFieldWithConfigurationHandler:^(UITextField *f) {
-        f.text = UIPasteboard.generalPasteboard.hasStrings && [UIPasteboard.generalPasteboard.string hasPrefix:@"/"]
-            ? UIPasteboard.generalPasteboard.string : @"/private/var/";
+        wq_go_to_path_prefill(f);
         f.autocapitalizationType = UITextAutocapitalizationTypeNone;
         f.autocorrectionType = UITextAutocorrectionTypeNo;
         f.clearButtonMode = UITextFieldViewModeAlways;
@@ -5924,6 +5938,7 @@ static NSString *const kWQTroubleshootingFooter =
     [alert addAction:wq_alert_action(@"Open", UIAlertActionStyleDefault, ^(UIAlertAction *__unused a) {
         NSString *path = alert.textFields.firstObject.text.stringByStandardizingPath;
         if (![path hasPrefix:@"/"]) return;
+        [NSUserDefaults.standardUserDefaults setObject:path forKey:kWQLastGoToPathPref];
         dispatch_async(wq_io(), ^{
             struct stat st;
             BOOL exists = wq_stat(path, &st);
