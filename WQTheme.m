@@ -331,6 +331,27 @@ void wq_set_colored_cards(BOOL on)
     WQThemeChanged();
 }
 
+static NSString *const kWQCardColorPref = @"WQCardColor";
+
+UIColor *wq_card_color(void)
+{
+    NSArray *rgb = [NSUserDefaults.standardUserDefaults arrayForKey:kWQCardColorPref];
+    if (rgb.count != 3) return nil;
+    for (id v in rgb) if (![v isKindOfClass:NSNumber.class]) return nil;
+    return [UIColor colorWithRed:[rgb[0] doubleValue] green:[rgb[1] doubleValue] blue:[rgb[2] doubleValue] alpha:1];
+}
+
+void wq_set_card_color(UIColor *color)
+{
+    CGFloat r = 0, g = 0, b = 0, a = 0;
+    if (color && [color getRed:&r green:&g blue:&b alpha:&a])
+        [NSUserDefaults.standardUserDefaults setObject:@[@(MIN(1, MAX(0, r))), @(MIN(1, MAX(0, g))), @(MIN(1, MAX(0, b)))]
+                                                forKey:kWQCardColorPref];
+    else
+        [NSUserDefaults.standardUserDefaults removeObjectForKey:kWQCardColorPref];
+    WQThemeChanged();
+}
+
 UIColor *wq_theme_card(void)
 {
     WQTheme *theme = wq_active_theme();
@@ -391,7 +412,10 @@ typedef NS_ENUM(NSInteger, WQThemeSection) { WQThemeSectionThemes, WQThemeSectio
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
     if (section == WQThemeSectionThemes) return 2 + (NSInteger)_installed.count;
-    return 2;   // Plain Background + Colored Cards, or Import + Export
+    // Plain Background, Colored Cards, and while cards are colored: Card
+    // Color, plus Use Icon Colors once one is picked. Or Import + Export.
+    if (section == WQThemeSectionPlain) return !wq_colored_cards() ? 2 : wq_card_color() ? 4 : 3;
+    return 2;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
@@ -400,7 +424,7 @@ typedef NS_ENUM(NSInteger, WQThemeSection) { WQThemeSectionThemes, WQThemeSectio
         return WQLocalized(@"Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page.");
     if (section == WQThemeSectionPlain)
         return [NSString stringWithFormat:@"%@\n\n%@", WQLocalized(@"Plain Background: a plain black (or white) background instead of the colored one."),
-                WQLocalized(@"Colored Cards: the cards on the start screen take on the color of their icon.")];
+                WQLocalized(@"Colored Cards: the cards on the start screen take on the color of their icon, or the one color picked under Card Color.")];
     return WQLocalized(@"A theme is a small .wqtheme file (JSON) with colors for dark and light mode. Export Current Colors gives you one to start from; the format is described in the README on GitHub. Open a .wqtheme file with WQ Files to install it.");
 }
 
@@ -454,16 +478,40 @@ typedef NS_ENUM(NSInteger, WQThemeSection) { WQThemeSectionThemes, WQThemeSectio
             [swatch.layer addSublayer:g];
             cell.accessoryView = swatch;
         }
+    } else if (indexPath.section == WQThemeSectionPlain && indexPath.row == 2) {
+        c.text = WQLocalized(@"Card Color");
+        c.secondaryText = WQLocalized(wq_card_color() ? @"One color for every card" : @"Each card in its icon's color");
+        c.image = [UIImage systemImageNamed:@"paintpalette"];
+        UIColorWell *well = [[UIColorWell alloc] initWithFrame:CGRectMake(0, 0, 32, 32)];
+        well.supportsAlpha = NO;
+        well.title = WQLocalized(@"Card Color");
+        well.selectedColor = wq_card_color() ?: wq_theme_accent();
+        __weak typeof(self) weakSelf = self;
+        [well addAction:[UIAction actionWithHandler:^(UIAction *action) {
+            BOOL had = wq_card_color() != nil;
+            wq_set_card_color(((UIColorWell *)action.sender).selectedColor);
+            if (!had) [weakSelf.tableView reloadSections:[NSIndexSet indexSetWithIndex:WQThemeSectionPlain] withRowAnimation:UITableViewRowAnimationAutomatic];
+        }] forControlEvents:UIControlEventValueChanged];
+        cell.accessoryView = well;
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    } else if (indexPath.section == WQThemeSectionPlain && indexPath.row == 3) {
+        c.text = WQLocalized(@"Use Icon Colors");
+        c.image = [UIImage systemImageNamed:@"arrow.uturn.backward"];
+        c.textProperties.color = self.view.tintColor;
     } else if (indexPath.section == WQThemeSectionPlain) {
         BOOL plain = indexPath.row == 0;
         c.text = WQLocalized(plain ? @"Plain Background" : @"Colored Cards");
         c.image = [UIImage systemImageNamed:plain ? @"square.fill" : @"square.grid.2x2.fill"];
         UISwitch *toggle = [UISwitch new];
         toggle.on = plain ? wq_prism_plain_background() : wq_colored_cards();
+        __weak UITableView *table = tableView;
         [toggle addAction:[UIAction actionWithHandler:^(UIAction *action) {
             BOOL on = ((UISwitch *)action.sender).isOn;
             if (plain) wq_set_prism_plain_background(on);
-            else wq_set_colored_cards(on);
+            else {
+                wq_set_colored_cards(on);
+                [table reloadSections:[NSIndexSet indexSetWithIndex:WQThemeSectionPlain] withRowAnimation:UITableViewRowAnimationAutomatic];
+            }
         }] forControlEvents:UIControlEventValueChanged];
         cell.accessoryView = toggle;
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
@@ -481,6 +529,9 @@ typedef NS_ENUM(NSInteger, WQThemeSection) { WQThemeSectionThemes, WQThemeSectio
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     if (indexPath.section == WQThemeSectionThemes) {
         wq_set_active_theme_id([self themeIDAtRow:indexPath.row]);
+    } else if (indexPath.section == WQThemeSectionPlain && indexPath.row == 3) {
+        wq_set_card_color(nil);
+        [tableView reloadSections:[NSIndexSet indexSetWithIndex:WQThemeSectionPlain] withRowAnimation:UITableViewRowAnimationAutomatic];
     } else if (indexPath.section == WQThemeSectionActions && indexPath.row == 0) {
         NSMutableArray<UTType *> *types = [NSMutableArray arrayWithObject:UTTypeJSON];
         UTType *theme = [UTType typeWithFilenameExtension:@"wqtheme"];

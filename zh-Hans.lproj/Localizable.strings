@@ -1058,6 +1058,15 @@
 "Built in" = "内置";
 "Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "轻点主题即可使用。长按或滑动主题可共享，或删除导入的主题。主题也会应用到 Wi-Fi 共享页面。";
 "Colored Cards" = "彩色卡片";
-"Colored Cards: the cards on the start screen take on the color of their icon." = "彩色卡片：开始屏幕上的卡片会采用其图标的颜色。";
 "Show Folder Sizes" = "显示文件夹大小";
 "Show Folder Sizes: shows how much space each folder takes, measured in the background with the folders on screen first. Every file below each folder is read for this, so large folders and App Data take a while. Sizes are kept for ten minutes; pull down to measure again." = "显示文件夹大小：显示每个文件夹占用的空间，在后台测量，优先测量屏幕上的文件夹。这需要读取每个文件夹中的所有文件，因此大文件夹和应用数据需要一些时间。大小会保留十分钟；下拉可重新测量。";
+"Card Color" = "卡片颜色";
+"One color for every card" = "所有卡片使用同一颜色";
+"Each card in its icon's color" = "每张卡片使用其图标的颜色";
+"Use Icon Colors" = "使用图标颜色";
+"Colored Cards: the cards on the start screen take on the color of their icon, or the one color picked under Card Color." = "彩色卡片：开始屏幕上的卡片采用其图标的颜色，或在“卡片颜色”中选择的颜色。";
+"No Matches" = "无匹配项";
+"The Show filter hides everything in this list." = "“显示”筛选隐藏了此列表中的所有项目。";
+"Empty Folder" = "空文件夹";
+"There are no files or folders in here." = "这里没有文件或文件夹。";
+"Empty" = "空";

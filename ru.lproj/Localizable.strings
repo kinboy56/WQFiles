@@ -1058,6 +1058,15 @@
 "Built in" = "Встроенная";
 "Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "Нажмите на тему, чтобы выбрать её. Нажмите и удерживайте или смахните тему, чтобы поделиться ею или удалить импортированную. Темы также окрашивают страницу доступа по Wi-Fi.";
 "Colored Cards" = "Цветные карточки";
-"Colored Cards: the cards on the start screen take on the color of their icon." = "Цветные карточки: карточки на начальном экране окрашиваются в цвет своего значка.";
 "Show Folder Sizes" = "Показывать размер папок";
 "Show Folder Sizes: shows how much space each folder takes, measured in the background with the folders on screen first. Every file below each folder is read for this, so large folders and App Data take a while. Sizes are kept for ten minutes; pull down to measure again." = "Показывать размер папок: показывает, сколько места занимает каждая папка; измеряется в фоне, сначала папки на экране. Для этого читается каждый файл в каждой папке, поэтому большие папки и данные приложений измеряются не сразу. Размеры хранятся десять минут; потяните вниз, чтобы измерить заново.";
+"Card Color" = "Цвет карточек";
+"One color for every card" = "Один цвет для всех карточек";
+"Each card in its icon's color" = "Каждая карточка в цвете своего значка";
+"Use Icon Colors" = "Цвета значков";
+"Colored Cards: the cards on the start screen take on the color of their icon, or the one color picked under Card Color." = "Цветные карточки: карточки на начальном экране принимают цвет своего значка или цвет, выбранный в «Цвет карточек».";
+"No Matches" = "Нет совпадений";
+"The Show filter hides everything in this list." = "Фильтр «Показать» скрывает всё в этом списке.";
+"Empty Folder" = "Пустая папка";
+"There are no files or folders in here." = "Здесь нет файлов и папок.";
+"Empty" = "Пусто";

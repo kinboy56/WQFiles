@@ -1850,6 +1850,29 @@ static NSString *wq_info_date(struct timespec ts)
     _indexRows = rows;
     // A filled menu button shows that a Show filter hides some containers.
     _menuItem.image = [UIImage systemImageNamed:filter ? @"ellipsis.circle.fill" : @"ellipsis.circle"];
+    [self updateEmptyState];
+}
+
+// An empty list says so instead of showing a blank screen: an empty folder,
+// or a search or Show filter that matches nothing.
+- (void)updateEmptyState
+{
+    UIContentUnavailableConfiguration *config = nil;
+    if (_all && !_error && !_items.count) {
+        if (_all.count) {
+            config = [UIContentUnavailableConfiguration searchConfiguration];
+            if (!_query.length) {
+                config.text = WQLocalized(@"No Matches");
+                config.secondaryText = WQLocalized(@"The Show filter hides everything in this list.");
+            }
+        } else if (!_scanInFlight) {
+            config = [UIContentUnavailableConfiguration emptyConfiguration];
+            config.image = [UIImage systemImageNamed:@"folder"];
+            config.text = WQLocalized(@"Empty Folder");
+            config.secondaryText = WQLocalized(@"There are no files or folders in here.");
+        }
+    }
+    self.contentUnavailableConfiguration = config;
 }
 
 - (NSArray<NSString *> *)sectionIndexTitlesForTableView:(UITableView *)tableView
@@ -2628,6 +2651,7 @@ static NSString *wq_info_date(struct timespec ts)
             self->_lastReloadFinished = NSDate.date.timeIntervalSinceReferenceDate;
             [self.refreshControl endRefreshing];
             [self updateHeader];
+            [self updateEmptyState];
             [self.tableView reloadData];
             [self updateBackupSelectionAvailability];
             if (self->_selectingBackups) [self updateBackupSelectionBar];
@@ -2692,7 +2716,8 @@ static NSString *wq_info_date(struct timespec ts)
         if (!item.isDir || item.isLink || item.unreadable) continue;
         unsigned long long bytes = 0;
         BOOL limited = NO;
-        if (wq_folder_size_cached(item.path, &bytes, &limited)) {
+        // A cached 0 is measured again: that also lists it, to say "Empty".
+        if (wq_folder_size_cached(item.path, &bytes, &limited) && (bytes || limited)) {
             item.folderSize = (long long)bytes;
             item.folderSizeLimited = limited;
             anyCached = YES;
@@ -2737,9 +2762,17 @@ static NSString *wq_info_date(struct timespec ts)
             if (result == WQMeasureResultMissing) continue;
             BOOL limited = result != WQMeasureResultKnown;
             wq_folder_size_store(item.path, bytes, limited);
+            // 0 bytes: empty, or only empty files and folders. A listing tells
+            // which, so an empty folder says "Empty" rather than "Zero KB".
+            NSInteger children = -1;
+            if (!bytes && !limited) {
+                NSArray *names = wq_list(item.path, NULL);
+                if (names) children = (NSInteger)names.count;
+            }
             dispatch_async(dispatch_get_main_queue(), ^{
                 item.folderSize = (long long)bytes;
                 item.folderSizeLimited = limited;
+                if (children >= 0) item.childCount = children;
             });
             if (CFAbsoluteTimeGetCurrent() - lastRefresh > 0.3) {
                 lastRefresh = CFAbsoluteTimeGetCurrent();
@@ -2793,7 +2826,11 @@ static NSString *wq_info_date(struct timespec ts)
     BOOL byCreated = wq_sort_key() == WQSortCreated;
     NSString *date = wq_folder_date_text(byCreated ? item.created : item.modified);
     NSString *detail = item.isDir ? date : WQLocalizedFormat(@"%@ · %@", wq_size_text(item.size), date);
-    if (item.isDir && item.childCount >= 0) {
+    // Empty folders say so (item count or size), rather than "0 items".
+    BOOL emptyFolder = item.isDir && item.childCount == 0;
+    if (emptyFolder) {
+        detail = WQLocalizedFormat(@"%@ · %@", WQLocalized(@"Empty"), date);
+    } else if (item.isDir && item.childCount >= 0) {
         NSString *items = item.childCount == 1
             ? WQLocalizedFormat(@"%ld item", (long)item.childCount)
             : WQLocalizedFormat(@"%ld items", (long)item.childCount);
@@ -2801,7 +2838,7 @@ static NSString *wq_info_date(struct timespec ts)
     }
     // Show Folder Sizes: in front, like a file's size; "≥" when part of the
     // folder couldn't be read.
-    if (item.isDir && item.folderSize >= 0 && wq_show_folder_sizes()) {
+    if (item.isDir && item.folderSize >= 0 && wq_show_folder_sizes() && !emptyFolder) {
         NSString *size = wq_size_text((unsigned long long)item.folderSize);
         if (item.folderSizeLimited) size = [@"≥ " stringByAppendingString:size];
         detail = WQLocalizedFormat(@"%@ · %@", size, detail);
@@ -4615,7 +4652,8 @@ static NSArray<UIColor *> *WQPrismTone(NSString *tone)
 {
     _tint.hidden = !wq_colored_cards();
     if (_tint.hidden) return;
-    NSArray<UIColor *> *colors = WQPrismTone(_tone);
+    UIColor *picked = wq_card_color();
+    NSArray<UIColor *> *colors = picked ? @[picked, picked] : WQPrismTone(_tone);
     BOOL dark = self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
     _tint.colors = @[(id)[colors[1] colorWithAlphaComponent:dark ? 0.34 : 0.22].CGColor,
                      (id)[colors[0] colorWithAlphaComponent:dark ? 0.12 : 0.08].CGColor,

@@ -1054,6 +1054,15 @@
 "Built in" = "مدمجة";
 "Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "اضغط على سمة لاستخدامها. اضغط مطولًا أو اسحب سمة لمشاركتها، أو لحذف سمة مستوردة. تلوّن السمات صفحة المشاركة عبر Wi-Fi أيضًا.";
 "Colored Cards" = "بطاقات ملونة";
-"Colored Cards: the cards on the start screen take on the color of their icon." = "بطاقات ملونة: تأخذ البطاقات في شاشة البداية لون أيقوناتها.";
 "Show Folder Sizes" = "إظهار أحجام المجلدات";
 "Show Folder Sizes: shows how much space each folder takes, measured in the background with the folders on screen first. Every file below each folder is read for this, so large folders and App Data take a while. Sizes are kept for ten minutes; pull down to measure again." = "إظهار أحجام المجلدات: يعرض المساحة التي يشغلها كل مجلد، وتُقاس في الخلفية بدءًا بالمجلدات الظاهرة على الشاشة. يتطلب ذلك قراءة كل ملف داخل كل مجلد، لذا تستغرق المجلدات الكبيرة وبيانات التطبيقات بعض الوقت. تُحفظ الأحجام عشر دقائق؛ اسحب للأسفل لإعادة القياس.";
+"Card Color" = "لون البطاقات";
+"One color for every card" = "لون واحد لكل البطاقات";
+"Each card in its icon's color" = "كل بطاقة بلون أيقونتها";
+"Use Icon Colors" = "استخدام ألوان الأيقونات";
+"Colored Cards: the cards on the start screen take on the color of their icon, or the one color picked under Card Color." = "البطاقات الملونة: تأخذ بطاقات شاشة البداية لون أيقونتها، أو اللون المختار في لون البطاقات.";
+"No Matches" = "لا توجد نتائج";
+"The Show filter hides everything in this list." = "عامل التصفية «عرض» يخفي كل شيء في هذه القائمة.";
+"Empty Folder" = "مجلد فارغ";
+"There are no files or folders in here." = "لا توجد ملفات أو مجلدات هنا.";
+"Empty" = "فارغ";

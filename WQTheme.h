@@ -83,6 +83,10 @@ NSArray<UIColor *> *_Nullable wq_theme_tile_colors(NSString *tone);
 // on their icon's color.
 BOOL wq_colored_cards(void);
 void wq_set_colored_cards(BOOL on);
+// Settings → Theme → Card Color: one color for every colored card instead of
+// each icon's own; nil means the icon colors.
+UIColor *_Nullable wq_card_color(void);
+void wq_set_card_color(UIColor *_Nullable color);
 
 // Settings → Theme screen.
 UIViewController *wq_theme_settings_controller(void);

@@ -1058,6 +1058,15 @@
 "Built in" = "Built in";
 "Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page.";
 "Colored Cards" = "Colored Cards";
-"Colored Cards: the cards on the start screen take on the color of their icon." = "Colored Cards: the cards on the start screen take on the color of their icon.";
 "Show Folder Sizes" = "Show Folder Sizes";
 "Show Folder Sizes: shows how much space each folder takes, measured in the background with the folders on screen first. Every file below each folder is read for this, so large folders and App Data take a while. Sizes are kept for ten minutes; pull down to measure again." = "Show Folder Sizes: shows how much space each folder takes, measured in the background with the folders on screen first. Every file below each folder is read for this, so large folders and App Data take a while. Sizes are kept for ten minutes; pull down to measure again.";
+"Card Color" = "Card Color";
+"One color for every card" = "One color for every card";
+"Each card in its icon's color" = "Each card in its icon's color";
+"Use Icon Colors" = "Use Icon Colors";
+"Colored Cards: the cards on the start screen take on the color of their icon, or the one color picked under Card Color." = "Colored Cards: the cards on the start screen take on the color of their icon, or the one color picked under Card Color.";
+"No Matches" = "No Matches";
+"The Show filter hides everything in this list." = "The Show filter hides everything in this list.";
+"Empty Folder" = "Empty Folder";
+"There are no files or folders in here." = "There are no files or folders in here.";
+"Empty" = "Empty";

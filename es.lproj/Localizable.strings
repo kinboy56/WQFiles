@@ -1058,6 +1058,15 @@
 "Built in" = "Integrado";
 "Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "Toca un tema para usarlo. Mantén pulsado o desliza un tema para compartirlo o para borrar uno importado. Los temas también colorean la página de compartir por Wi-Fi.";
 "Colored Cards" = "Tarjetas de color";
-"Colored Cards: the cards on the start screen take on the color of their icon." = "Tarjetas de color: las tarjetas de la pantalla de inicio toman el color de su icono.";
 "Show Folder Sizes" = "Mostrar tamaño de carpetas";
 "Show Folder Sizes: shows how much space each folder takes, measured in the background with the folders on screen first. Every file below each folder is read for this, so large folders and App Data take a while. Sizes are kept for ten minutes; pull down to measure again." = "Mostrar tamaño de carpetas: muestra cuánto espacio ocupa cada carpeta, medido en segundo plano empezando por las carpetas en pantalla. Para ello se lee cada archivo de cada carpeta, así que las carpetas grandes y los Datos de apps tardan un poco. Los tamaños se conservan diez minutos; desliza hacia abajo para medir de nuevo.";
+"Card Color" = "Color de tarjetas";
+"One color for every card" = "Un color para todas las tarjetas";
+"Each card in its icon's color" = "Cada tarjeta del color de su icono";
+"Use Icon Colors" = "Usar colores de iconos";
+"Colored Cards: the cards on the start screen take on the color of their icon, or the one color picked under Card Color." = "Tarjetas de color: las tarjetas de la pantalla de inicio toman el color de su icono, o el color elegido en Color de tarjetas.";
+"No Matches" = "Sin coincidencias";
+"The Show filter hides everything in this list." = "El filtro Mostrar oculta todo en esta lista.";
+"Empty Folder" = "Carpeta vacía";
+"There are no files or folders in here." = "Aquí no hay archivos ni carpetas.";
+"Empty" = "Vacía";

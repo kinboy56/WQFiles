@@ -1058,6 +1058,15 @@
 "Built in" = "ในตัว";
 "Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "แตะธีมเพื่อใช้งาน แตะค้างหรือปัดธีมเพื่อแชร์ หรือลบธีมที่นำเข้า ธีมยังใช้กับหน้าการแชร์ผ่าน Wi-Fi ด้วย";
 "Colored Cards" = "การ์ดสี";
-"Colored Cards: the cards on the start screen take on the color of their icon." = "การ์ดสี: การ์ดบนหน้าจอเริ่มต้นจะใช้สีตามไอคอนของตัวเอง";
 "Show Folder Sizes" = "แสดงขนาดโฟลเดอร์";
 "Show Folder Sizes: shows how much space each folder takes, measured in the background with the folders on screen first. Every file below each folder is read for this, so large folders and App Data take a while. Sizes are kept for ten minutes; pull down to measure again." = "แสดงขนาดโฟลเดอร์: แสดงพื้นที่ที่แต่ละโฟลเดอร์ใช้ วัดในเบื้องหลังโดยเริ่มจากโฟลเดอร์ที่อยู่บนหน้าจอ ต้องอ่านทุกไฟล์ในแต่ละโฟลเดอร์ โฟลเดอร์ขนาดใหญ่และข้อมูลแอปจึงใช้เวลาสักครู่ ขนาดจะถูกเก็บไว้สิบนาที ดึงลงเพื่อวัดใหม่";
+"Card Color" = "สีการ์ด";
+"One color for every card" = "สีเดียวสำหรับทุกการ์ด";
+"Each card in its icon's color" = "การ์ดแต่ละใบเป็นสีของไอคอน";
+"Use Icon Colors" = "ใช้สีไอคอน";
+"Colored Cards: the cards on the start screen take on the color of their icon, or the one color picked under Card Color." = "การ์ดสี: การ์ดบนหน้าจอเริ่มต้นจะใช้สีของไอคอน หรือสีที่เลือกไว้ใน สีการ์ด";
+"No Matches" = "ไม่มีรายการที่ตรงกัน";
+"The Show filter hides everything in this list." = "ตัวกรอง แสดง ซ่อนทุกอย่างในรายการนี้";
+"Empty Folder" = "โฟลเดอร์ว่าง";
+"There are no files or folders in here." = "ไม่มีไฟล์หรือโฟลเดอร์ในนี้";
+"Empty" = "ว่าง";

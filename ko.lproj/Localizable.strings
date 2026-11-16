@@ -1058,6 +1058,15 @@
 "Built in" = "기본 제공";
 "Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page." = "테마를 탭하면 사용합니다. 테마를 길게 누르거나 쓸어서 공유하거나, 가져온 테마를 삭제하세요. 테마는 Wi-Fi 공유 페이지에도 적용됩니다.";
 "Colored Cards" = "색상 카드";
-"Colored Cards: the cards on the start screen take on the color of their icon." = "색상 카드: 시작 화면의 카드가 아이콘 색상을 띱니다.";
 "Show Folder Sizes" = "폴더 크기 보기";
 "Show Folder Sizes: shows how much space each folder takes, measured in the background with the folders on screen first. Every file below each folder is read for this, so large folders and App Data take a while. Sizes are kept for ten minutes; pull down to measure again." = "폴더 크기 보기: 각 폴더가 차지하는 공간을 보여 줍니다. 화면에 보이는 폴더부터 백그라운드에서 측정합니다. 각 폴더 안의 모든 파일을 읽어야 하므로 큰 폴더와 앱 데이터는 시간이 걸립니다. 크기는 10분 동안 유지되며, 아래로 당기면 다시 측정합니다.";
+"Card Color" = "카드 색상";
+"One color for every card" = "모든 카드에 한 가지 색상";
+"Each card in its icon's color" = "각 카드는 아이콘 색상으로";
+"Use Icon Colors" = "아이콘 색상 사용";
+"Colored Cards: the cards on the start screen take on the color of their icon, or the one color picked under Card Color." = "색상 카드: 시작 화면의 카드가 아이콘 색상 또는 카드 색상에서 고른 색상을 띱니다.";
+"No Matches" = "일치 항목 없음";
+"The Show filter hides everything in this list." = "보기 필터가 이 목록의 모든 항목을 숨기고 있습니다.";
+"Empty Folder" = "빈 폴더";
+"There are no files or folders in here." = "파일이나 폴더가 없습니다.";
+"Empty" = "비어 있음";
