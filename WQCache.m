@@ -399,6 +399,7 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
 @implementation WQCacheCleanerViewController {
     WQScanTask *_scanTask;
     NSDictionary *_shownScanResult;
+    BOOL _selectNextResult;   // the scan finishing right now ran on this screen
     BOOL _resumeScan;
 
     NSArray<WQCacheItem *> *_items;
@@ -453,12 +454,16 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
             }
             item.targetRecords = records;
             item.targets = targets;
-            // Historical results never restore a destructive selection implicitly.
-            item.selected = NO;
+            // A scan that just finished here selects what can be cleaned, as
+            // up to 0.9.10 (#67); historical results (restored after a
+            // restart, or finished elsewhere) never restore a destructive
+            // selection implicitly.
+            item.selected = _selectNextResult && !item.limited;
             [rows addObject:item];
         }
         _items = rows;
         _shownScanResult = result;
+        _selectNextResult = NO;
         [self rebuildVisibleItems];
     }
     _scanning = _scanTask.running;
@@ -895,7 +900,10 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
             if (generation != self->_scanGeneration || cancellation.isCancelled) return;
             NSMutableDictionary *snapshot = [[self snapshotRows:items note:note] mutableCopy];
             snapshot[@"complete"] = @(failedEnumerations == 0);
+            // Shown synchronously through the task's change notification.
+            self->_selectNextResult = YES;
             [self->_scanTask finish:snapshot generation:taskGeneration];
+            self->_selectNextResult = NO;
 
         });
     });
