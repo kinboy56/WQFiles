@@ -1017,5 +1017,15 @@
 "Upload Files…" = "上传文件…";
 "Drop files here or use Upload Files. Nothing is overwritten." = "将文件拖到此处或使用“上传文件”。不会覆盖任何文件。";
 "Allow Uploads" = "允许上传";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "在同一 Wi-Fi 下的电脑或手机浏览器中打开该地址，并使用用户名和密码登录。可以打开和下载文件。关闭此页面或离开 WQ Files 时共享会停止，且每次的密码都不同。";
 "Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "允许上传：浏览器可以向此文件夹及其子文件夹添加文件。不会覆盖或删除任何内容：重名的文件将保存为“名称 2”。";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files." = "在同一 Wi-Fi 下的电脑或手机浏览器中打开该地址，并使用用户名和密码登录。可以打开和下载文件。关闭此页面或离开 WQ Files 时共享会停止。";
+"The password is the one set in Settings → Sharing Password." = "密码为“设置 → 共享密码”中设置的密码。";
+"The password changes each time; set a fixed one in Settings → Sharing Password." = "每次的密码都不同；可在“设置 → 共享密码”中设置固定密码。";
+"Sharing Password" = "共享密码";
+"Fixed" = "固定";
+"Random each time" = "每次随机";
+"A fixed password for Wi-Fi Sharing. The user is always “wq”." = "Wi-Fi 共享的固定密码。用户名始终为“wq”。";
+"At least 6 characters." = "至少 6 个字符。";
+"Use Random Password" = "使用随机密码";
+"The password could not be saved in the keychain." = "无法将密码保存到钥匙串。";
+"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "共享密码：Wi-Fi 共享使用固定密码，而不是每次生成新的随机密码。密码保存在钥匙串中。";

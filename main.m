@@ -5217,7 +5217,7 @@ static NSString *const kWQTroubleshootingFooter =
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
     // Rows 7 and 8: Background Color, and Default Colors once one is picked.
-    return section == 0 ? (wq_prism_background_color() ? 9 : 8) : section == 1 ? 3 : 1;
+    return section == 0 ? (wq_prism_background_color() ? 9 : 8) : section == 1 ? 4 : 1;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
@@ -5228,6 +5228,7 @@ static NSString *const kWQTroubleshootingFooter =
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
 {
     if (section == 2) return WQLocalized(kWQTroubleshootingFooter);
+    if (section == 1) return WQLocalized(@"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain.");
     if (section != 0) return nil;
     return [NSString stringWithFormat:@"%@\n\n%@\n\n%@\n\n%@\n\n%@",
             WQLocalized(@"Allow Deleting: when off, nothing can be deleted: no Delete or swipe to delete in folders and backups, no Clear Data in Apps and no cleaning in the Cache Cleaner. Saving, moving and restoring still work.\n\nShow Item Counts: shows how many items each folder holds. Every subfolder has to be listed for this, which slows down folders with many subfolders, especially in other apps' data."),
@@ -5311,13 +5312,13 @@ static NSString *const kWQTroubleshootingFooter =
         cell.accessoryType = UITableViewCellAccessoryNone;
         return cell;
     }
-    NSArray<NSString *> *titles = @[@"Language", @"Log", @"About"];
-    NSArray<NSString *> *symbols = @[@"globe", @"doc.plaintext", @"info.circle"];
+    NSArray<NSString *> *titles = @[@"Language", @"Sharing Password", @"Log", @"About"];
+    NSArray<NSString *> *symbols = @[@"globe", @"key", @"doc.plaintext", @"info.circle"];
     c.text = WQLocalizedNullable(titles[(NSUInteger)indexPath.row]);
     c.image = [UIImage systemImageNamed:symbols[(NSUInteger)indexPath.row]];
     if (indexPath.row == 0) c.secondaryText = wq_language_name(wq_chosen_language());
-    if (indexPath.row == 1) c.secondaryText = nil;
-    if (indexPath.row == 2) c.secondaryText = wq_app_version_line();
+    if (indexPath.row == 1) c.secondaryText = WQLocalized(wq_sharing_password() ? @"Fixed" : @"Random each time");
+    if (indexPath.row == 3) c.secondaryText = wq_app_version_line();
     cell.contentConfiguration = c;
     cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     return cell;
@@ -5336,6 +5337,9 @@ static NSString *const kWQTroubleshootingFooter =
     if (indexPath.row == 0) {
         [self.navigationController pushViewController:[WQLanguageViewController new] animated:YES];
     } else if (indexPath.row == 1) {
+        __weak UITableView *table = tableView;
+        wq_edit_sharing_password(self, ^{ [table reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone]; });
+    } else if (indexPath.row == 2) {
         [self.navigationController pushViewController:[WQLogViewController new] animated:YES];
     } else {
         NSString *version = [NSString stringWithFormat:@"%@\n\n%@", wq_app_version_line(), WQLocalizedNullable(@"Sandbox escape: worse_query by @forcequitOS")];
@@ -5787,7 +5791,7 @@ static NSString *const kWQTroubleshootingFooter =
 {
     // System Groups is the extra last row, on iOS 27 only.
     if (section == 3) return 1;
-    if (section == 2) return 7;
+    if (section == 2) return 8;   // row 7: Sharing Password
     return section == 0 ? (NSInteger)_locations.count + (wq_system_areas_reachable() ? 1 : 0) : 8;
 }
 
@@ -5806,7 +5810,8 @@ static NSString *const kWQTroubleshootingFooter =
         return [NSString stringWithFormat:@"%@\n\n%@",
                 WQLocalized(@"Allow Deleting: when off, nothing can be deleted: no Delete or swipe to delete in folders and backups, no Clear Data in Apps and no cleaning in the Cache Cleaner. Saving, moving and restoring still work.\n\nShow Item Counts: shows how many items each folder holds. Every subfolder has to be listed for this, which slows down folders with many subfolders, especially in other apps' data."),
                 [NSString stringWithFormat:@"%@\n\n%@", WQLocalized(@"Keep Data Before Restore: restoring an app or file backup first backs up what's there now, so a failed restore can be undone. When off, that backup is deleted once the restore succeeded."),
-                 WQLocalized(@"Reopen Last Folder: WQ Files starts in the folder you were in. Check for Updates: twice a day WQ Files reads the public release list on GitHub and shows a note when a new version is out; nothing about your device is sent.")]];
+                 [NSString stringWithFormat:@"%@\n\n%@", WQLocalized(@"Reopen Last Folder: WQ Files starts in the folder you were in. Check for Updates: twice a day WQ Files reads the public release list on GitHub and shows a note when a new version is out; nothing about your device is sent."),
+                  WQLocalized(@"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain.")]]];
     return section == 1
         ? WQLocalized(@"Overwritten and deleted files are copied to Backups first (also visible in the Files app). Long-press a backup to restore it.")
         : nil;
@@ -5824,6 +5829,15 @@ static NSString *const kWQTroubleshootingFooter =
         c.image = [UIImage systemImageNamed:@"arrow.counterclockwise.circle"];
         cell.contentConfiguration = c;
         cell.accessoryType = UITableViewCellAccessoryNone;
+        return cell;
+    }
+    if (indexPath.section == 2 && indexPath.row == 7) {
+        UIListContentConfiguration *v = [UIListContentConfiguration valueCellConfiguration];
+        v.text = WQLocalized(@"Sharing Password");
+        v.image = [UIImage systemImageNamed:@"key"];
+        v.secondaryText = WQLocalized(wq_sharing_password() ? @"Fixed" : @"Random each time");
+        cell.contentConfiguration = v;
+        cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
         return cell;
     }
     if (indexPath.section == 2 && indexPath.row == 3) {
@@ -5888,6 +5902,11 @@ static NSString *const kWQTroubleshootingFooter =
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     if (indexPath.section == 2 && indexPath.row == 3) {
         [self.navigationController pushViewController:[WQLanguageViewController new] animated:YES];
+        return;
+    }
+    if (indexPath.section == 2 && indexPath.row == 7) {
+        __weak UITableView *table = tableView;
+        wq_edit_sharing_password(self, ^{ [table reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone]; });
         return;
     }
     if (indexPath.section == 3) { wq_confirm_reset_access_cache(self, nil); return; }

@@ -1017,5 +1017,15 @@
 "Upload Files…" = "Prześlij pliki…";
 "Drop files here or use Upload Files. Nothing is overwritten." = "Upuść pliki tutaj lub użyj Prześlij pliki. Nic nie jest nadpisywane.";
 "Allow Uploads" = "Zezwalaj na przesyłanie";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Otwórz adres w przeglądarce na komputerze lub telefonie w tej samej sieci Wi-Fi i zaloguj się użytkownikiem i hasłem. Pliki można otwierać i pobierać. Udostępnianie kończy się po zamknięciu tego ekranu lub wyjściu z WQ Files, a hasło za każdym razem jest nowe.";
 "Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "Zezwalaj na przesyłanie: przeglądarka może dodawać pliki do tego folderu i jego podfolderów. Nic nie jest nadpisywane ani usuwane: plik o zajętej nazwie zostaje zapisany jako „nazwa 2”.";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files." = "Otwórz adres w przeglądarce na komputerze lub telefonie w tej samej sieci Wi-Fi i zaloguj się użytkownikiem i hasłem. Pliki można otwierać i pobierać. Udostępnianie kończy się po zamknięciu tego ekranu lub wyjściu z WQ Files.";
+"The password is the one set in Settings → Sharing Password." = "Hasło to to ustawione w Ustawienia → Hasło udostępniania.";
+"The password changes each time; set a fixed one in Settings → Sharing Password." = "Hasło za każdym razem jest nowe; stałe możesz ustawić w Ustawienia → Hasło udostępniania.";
+"Sharing Password" = "Hasło udostępniania";
+"Fixed" = "Stałe";
+"Random each time" = "Losowe za każdym razem";
+"A fixed password for Wi-Fi Sharing. The user is always “wq”." = "Stałe hasło do udostępniania Wi-Fi. Użytkownik to zawsze „wq”.";
+"At least 6 characters." = "Co najmniej 6 znaków.";
+"Use Random Password" = "Użyj losowego hasła";
+"The password could not be saved in the keychain." = "Nie udało się zapisać hasła w pęku kluczy.";
+"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Hasło udostępniania: stałe hasło do udostępniania Wi-Fi zamiast nowego losowego za każdym razem. Jest przechowywane w pęku kluczy.";

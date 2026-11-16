@@ -1017,5 +1017,15 @@
 "Upload Files…" = "Enviar arquivos…";
 "Drop files here or use Upload Files. Nothing is overwritten." = "Arraste arquivos para cá ou use Enviar arquivos. Nada é substituído.";
 "Allow Uploads" = "Permitir envios";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Abra o endereço em um navegador em um computador ou celular na mesma rede Wi-Fi e entre com o usuário e a senha. Os arquivos podem ser abertos e baixados. O compartilhamento para quando você fecha esta tela ou sai do WQ Files, e a senha muda a cada vez.";
 "Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "Permitir envios: o navegador pode adicionar arquivos a esta pasta e às suas subpastas. Nada é substituído ou apagado: um arquivo com um nome já usado é salvo como “nome 2”.";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files." = "Abra o endereço em um navegador em um computador ou celular na mesma rede Wi-Fi e entre com o usuário e a senha. Os arquivos podem ser abertos e baixados. O compartilhamento para quando você fecha esta tela ou sai do WQ Files.";
+"The password is the one set in Settings → Sharing Password." = "A senha é a definida em Ajustes → Senha de compartilhamento.";
+"The password changes each time; set a fixed one in Settings → Sharing Password." = "A senha muda a cada vez; defina uma fixa em Ajustes → Senha de compartilhamento.";
+"Sharing Password" = "Senha de compartilhamento";
+"Fixed" = "Fixa";
+"Random each time" = "Aleatória a cada vez";
+"A fixed password for Wi-Fi Sharing. The user is always “wq”." = "Uma senha fixa para o compartilhamento Wi-Fi. O usuário é sempre “wq”.";
+"At least 6 characters." = "Pelo menos 6 caracteres.";
+"Use Random Password" = "Usar senha aleatória";
+"The password could not be saved in the keychain." = "Não foi possível salvar a senha nas Chaves.";
+"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Senha de compartilhamento: uma senha fixa para o compartilhamento Wi-Fi em vez de uma nova aleatória a cada vez. Ela fica guardada nas Chaves.";

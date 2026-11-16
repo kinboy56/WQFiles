@@ -1017,5 +1017,15 @@
 "Upload Files…" = "อัปโหลดไฟล์…";
 "Drop files here or use Upload Files. Nothing is overwritten." = "ลากไฟล์มาวางที่นี่หรือใช้อัปโหลดไฟล์ จะไม่มีการเขียนทับ";
 "Allow Uploads" = "อนุญาตการอัปโหลด";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "เปิดที่อยู่นี้ในเบราว์เซอร์บนคอมพิวเตอร์หรือโทรศัพท์ที่ใช้ Wi-Fi เดียวกัน แล้วลงชื่อเข้าด้วยผู้ใช้และรหัสผ่าน เปิดและดาวน์โหลดไฟล์ได้ การแชร์จะหยุดเมื่อคุณปิดหน้าจอนี้หรือออกจาก WQ Files และรหัสผ่านจะเปลี่ยนทุกครั้ง";
 "Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "อนุญาตการอัปโหลด: เบราว์เซอร์สามารถเพิ่มไฟล์ลงในโฟลเดอร์นี้และโฟลเดอร์ย่อย จะไม่มีการเขียนทับหรือลบ: ไฟล์ที่ชื่อซ้ำจะถูกบันทึกเป็น “ชื่อ 2”";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files." = "เปิดที่อยู่นี้ในเบราว์เซอร์บนคอมพิวเตอร์หรือโทรศัพท์ที่ใช้ Wi-Fi เดียวกัน แล้วลงชื่อเข้าด้วยผู้ใช้และรหัสผ่าน เปิดและดาวน์โหลดไฟล์ได้ การแชร์จะหยุดเมื่อคุณปิดหน้าจอนี้หรือออกจาก WQ Files";
+"The password is the one set in Settings → Sharing Password." = "รหัสผ่านคือรหัสที่ตั้งไว้ใน การตั้งค่า → รหัสผ่านการแชร์";
+"The password changes each time; set a fixed one in Settings → Sharing Password." = "รหัสผ่านเปลี่ยนทุกครั้ง ตั้งรหัสแบบคงที่ได้ใน การตั้งค่า → รหัสผ่านการแชร์";
+"Sharing Password" = "รหัสผ่านการแชร์";
+"Fixed" = "คงที่";
+"Random each time" = "สุ่มใหม่ทุกครั้ง";
+"A fixed password for Wi-Fi Sharing. The user is always “wq”." = "รหัสผ่านคงที่สำหรับการแชร์ผ่าน Wi-Fi ผู้ใช้คือ “wq” เสมอ";
+"At least 6 characters." = "อย่างน้อย 6 ตัวอักษร";
+"Use Random Password" = "ใช้รหัสผ่านแบบสุ่ม";
+"The password could not be saved in the keychain." = "ไม่สามารถบันทึกรหัสผ่านลงในพวงกุญแจได้";
+"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "รหัสผ่านการแชร์: รหัสผ่านคงที่สำหรับการแชร์ผ่าน Wi-Fi แทนการสุ่มใหม่ทุกครั้ง เก็บไว้ในพวงกุญแจ";

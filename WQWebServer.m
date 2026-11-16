@@ -32,6 +32,84 @@
 @implementation WQWebEntry
 @end
 
+#pragma mark Sharing password
+
+static NSDictionary *WQSharingPasswordQuery(void)
+{
+    return @{(__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
+             (__bridge id)kSecAttrService: @"WQFiles.WiFiSharing",
+             (__bridge id)kSecAttrAccount: @"wq"};
+}
+
+// Fallback for signers that leave out the keychain entitlement (SecItemAdd
+// fails with -34018): the app's own preferences, inside its sandbox.
+static NSString *const kWQSharingPasswordPref = @"WQSharingPassword";
+
+NSString *wq_sharing_password(void)
+{
+    NSString *stored = [NSUserDefaults.standardUserDefaults stringForKey:kWQSharingPasswordPref];
+    if (stored.length) return stored;
+    NSMutableDictionary *query = [WQSharingPasswordQuery() mutableCopy];
+    query[(__bridge id)kSecReturnData] = @YES;
+    query[(__bridge id)kSecMatchLimit] = (__bridge id)kSecMatchLimitOne;
+    CFTypeRef result = NULL;
+    if (SecItemCopyMatching((__bridge CFDictionaryRef)query, &result) != errSecSuccess || !result) return nil;
+    NSData *data = (__bridge_transfer NSData *)result;
+    NSString *password = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    return password.length ? password : nil;
+}
+
+BOOL wq_set_sharing_password(NSString *password)
+{
+    SecItemDelete((__bridge CFDictionaryRef)WQSharingPasswordQuery());
+    [NSUserDefaults.standardUserDefaults removeObjectForKey:kWQSharingPasswordPref];
+    if (!password.length) return YES;
+    NSMutableDictionary *item = [WQSharingPasswordQuery() mutableCopy];
+    item[(__bridge id)kSecValueData] = [password dataUsingEncoding:NSUTF8StringEncoding];
+    item[(__bridge id)kSecAttrAccessible] = (__bridge id)kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly;
+    OSStatus status = SecItemAdd((__bridge CFDictionaryRef)item, NULL);
+    if (status == errSecSuccess) return YES;
+    wq_log(@"wifi sharing: keychain refused the password (%d); kept in the app's preferences instead", (int)status);
+    [NSUserDefaults.standardUserDefaults setObject:password forKey:kWQSharingPasswordPref];
+    return YES;
+}
+
+void wq_edit_sharing_password(UIViewController *host, void (^done)(void))
+{
+    NSString *current = wq_sharing_password();
+    UIAlertController *alert = wq_alert_controller(@"Sharing Password",
+        @"A fixed password for Wi-Fi Sharing. The user is always “wq”.", UIAlertControllerStyleAlert);
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *field) {
+        field.text = current;
+        field.placeholder = WQLocalized(@"At least 6 characters.");
+        field.autocapitalizationType = UITextAutocapitalizationTypeNone;
+        field.autocorrectionType = UITextAutocorrectionTypeNo;
+        field.spellCheckingType = UITextSpellCheckingTypeNo;
+        field.clearButtonMode = UITextFieldViewModeAlways;
+    }];
+    [alert addAction:wq_alert_action(@"Cancel", UIAlertActionStyleCancel, nil)];
+    if (current) {
+        [alert addAction:wq_alert_action(@"Use Random Password", UIAlertActionStyleDestructive, ^(UIAlertAction *__unused a) {
+            wq_set_sharing_password(nil);
+            if (done) done();
+        })];
+    }
+    __weak UIViewController *weakHost = host;
+    [alert addAction:wq_alert_action(@"Save", UIAlertActionStyleDefault, ^(UIAlertAction *__unused a) {
+        NSString *text = alert.textFields.firstObject.text ?: @"";
+        if (text.length < 6) {
+            wq_alert(weakHost, @"Sharing Password", @"At least 6 characters.");
+            return;
+        }
+        if (!wq_set_sharing_password(text)) {
+            wq_alert(weakHost, @"Sharing Password", @"The password could not be saved in the keychain.");
+            return;
+        }
+        if (done) done();
+    })];
+    [host presentViewController:alert animated:YES completion:nil];
+}
+
 static const NSUInteger kWQWebMaxHeader = 16384;
 static const NSUInteger kWQWebMaxConnections = 12;
 static const size_t kWQWebChunk = 256 * 1024;
@@ -143,7 +221,7 @@ static BOOL WQWebSend(int fd, const void *bytes, size_t length)
         }
         _listenFD = -1;
         _user = @"wq";
-        _password = [WQWebServer randomPassword];
+        _password = wq_sharing_password() ?: [WQWebServer randomPassword];
         _slots = dispatch_semaphore_create(kWQWebMaxConnections);
         NSString *pair = [NSString stringWithFormat:@"%@:%@", _user, _password];
         _expectedAuth = [pair dataUsingEncoding:NSUTF8StringEncoding];
@@ -1046,7 +1124,10 @@ static NSString *WQWebTone(WQWebItem *item)
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
 {
     if (section != 2) return nil;
-    NSString *text = WQLocalized(@"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time.");
+    NSString *text = [NSString stringWithFormat:@"%@ %@",
+        WQLocalized(@"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files."),
+        WQLocalized(wq_sharing_password() ? @"The password is the one set in Settings → Sharing Password."
+                                          : @"The password changes each time; set a fixed one in Settings → Sharing Password.")];
     if (_uploadable) text = [text stringByAppendingFormat:@"\n\n%@", WQLocalized(@"Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”.")];
     return text;
 }

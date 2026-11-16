@@ -1017,5 +1017,15 @@
 "Upload Files…" = "Tải tệp lên…";
 "Drop files here or use Upload Files. Nothing is overwritten." = "Thả tệp vào đây hoặc dùng Tải tệp lên. Không ghi đè tệp nào.";
 "Allow Uploads" = "Cho phép tải lên";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Mở địa chỉ trong trình duyệt trên máy tính hoặc điện thoại cùng mạng Wi-Fi và đăng nhập bằng người dùng và mật khẩu. Có thể mở và tải tệp xuống. Chia sẻ dừng khi bạn đóng màn hình này hoặc rời WQ Files, và mật khẩu thay đổi mỗi lần.";
 "Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "Cho phép tải lên: trình duyệt có thể thêm tệp vào thư mục này và các thư mục con. Không ghi đè hay xóa gì: tệp trùng tên được lưu thành “tên 2”.";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files." = "Mở địa chỉ trong trình duyệt trên máy tính hoặc điện thoại cùng mạng Wi-Fi và đăng nhập bằng người dùng và mật khẩu. Có thể mở và tải tệp xuống. Chia sẻ dừng khi bạn đóng màn hình này hoặc rời WQ Files.";
+"The password is the one set in Settings → Sharing Password." = "Mật khẩu là mật khẩu đã đặt trong Cài đặt → Mật khẩu chia sẻ.";
+"The password changes each time; set a fixed one in Settings → Sharing Password." = "Mật khẩu thay đổi mỗi lần; đặt mật khẩu cố định trong Cài đặt → Mật khẩu chia sẻ.";
+"Sharing Password" = "Mật khẩu chia sẻ";
+"Fixed" = "Cố định";
+"Random each time" = "Ngẫu nhiên mỗi lần";
+"A fixed password for Wi-Fi Sharing. The user is always “wq”." = "Mật khẩu cố định cho Chia sẻ Wi-Fi. Người dùng luôn là “wq”.";
+"At least 6 characters." = "Ít nhất 6 ký tự.";
+"Use Random Password" = "Dùng mật khẩu ngẫu nhiên";
+"The password could not be saved in the keychain." = "Không thể lưu mật khẩu vào chuỗi khóa.";
+"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Mật khẩu chia sẻ: mật khẩu cố định cho Chia sẻ Wi-Fi thay vì mật khẩu ngẫu nhiên mới mỗi lần. Được lưu trong chuỗi khóa.";

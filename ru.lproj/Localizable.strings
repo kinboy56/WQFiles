@@ -1017,5 +1017,15 @@
 "Upload Files…" = "Загрузить файлы…";
 "Drop files here or use Upload Files. Nothing is overwritten." = "Перетащите файлы сюда или нажмите «Загрузить файлы». Ничего не перезаписывается.";
 "Allow Uploads" = "Разрешить загрузку";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Откройте адрес в браузере на компьютере или телефоне в той же сети Wi-Fi и войдите с этим пользователем и паролем. Файлы можно открывать и скачивать. Доступ закрывается, когда вы закрываете этот экран или выходите из WQ Files, а пароль каждый раз новый.";
 "Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "Разрешить загрузку: браузер может добавлять файлы в эту папку и её подпапки. Ничего не перезаписывается и не удаляется: файл с уже занятым именем сохраняется как «имя 2».";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files." = "Откройте адрес в браузере на компьютере или телефоне в той же сети Wi-Fi и войдите с этим пользователем и паролем. Файлы можно открывать и скачивать. Доступ закрывается, когда вы закрываете этот экран или выходите из WQ Files.";
+"The password is the one set in Settings → Sharing Password." = "Пароль — тот, что задан в «Настройки → Пароль доступа».";
+"The password changes each time; set a fixed one in Settings → Sharing Password." = "Пароль каждый раз новый; постоянный можно задать в «Настройки → Пароль доступа».";
+"Sharing Password" = "Пароль доступа";
+"Fixed" = "Постоянный";
+"Random each time" = "Каждый раз случайный";
+"A fixed password for Wi-Fi Sharing. The user is always “wq”." = "Постоянный пароль для доступа по Wi-Fi. Пользователь всегда «wq».";
+"At least 6 characters." = "Не менее 6 символов.";
+"Use Random Password" = "Использовать случайный пароль";
+"The password could not be saved in the keychain." = "Не удалось сохранить пароль в связке ключей.";
+"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Пароль доступа: постоянный пароль для доступа по Wi-Fi вместо нового случайного каждый раз. Хранится в связке ключей.";

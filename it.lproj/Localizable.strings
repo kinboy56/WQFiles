@@ -1013,5 +1013,15 @@
 "Upload Files…" = "Carica file…";
 "Drop files here or use Upload Files. Nothing is overwritten." = "Trascina qui i file o usa Carica file. Nulla viene sovrascritto.";
 "Allow Uploads" = "Consenti caricamenti";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Apri l'indirizzo in un browser su un computer o telefono nella stessa rete Wi-Fi e accedi con utente e password. I file si possono aprire e scaricare. La condivisione si interrompe quando chiudi questa schermata o esci da WQ Files, e la password cambia ogni volta.";
 "Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "Consenti caricamenti: il browser può aggiungere file a questa cartella e alle sue sottocartelle. Nulla viene sovrascritto o eliminato: un file con un nome già usato viene salvato come “nome 2”.";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files." = "Apri l'indirizzo in un browser su un computer o telefono nella stessa rete Wi-Fi e accedi con utente e password. I file si possono aprire e scaricare. La condivisione si interrompe quando chiudi questa schermata o esci da WQ Files.";
+"The password is the one set in Settings → Sharing Password." = "La password è quella impostata in Impostazioni → Password di condivisione.";
+"The password changes each time; set a fixed one in Settings → Sharing Password." = "La password cambia ogni volta; impostane una fissa in Impostazioni → Password di condivisione.";
+"Sharing Password" = "Password di condivisione";
+"Fixed" = "Fissa";
+"Random each time" = "Casuale ogni volta";
+"A fixed password for Wi-Fi Sharing. The user is always “wq”." = "Una password fissa per la condivisione Wi-Fi. L'utente è sempre “wq”.";
+"At least 6 characters." = "Almeno 6 caratteri.";
+"Use Random Password" = "Usa password casuale";
+"The password could not be saved in the keychain." = "Impossibile salvare la password nel portachiavi.";
+"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Password di condivisione: una password fissa per la condivisione Wi-Fi invece di una nuova casuale ogni volta. È conservata nel portachiavi.";

@@ -48,6 +48,13 @@ NS_ASSUME_NONNULL_BEGIN
 void wq_present_wifi_sharing(UIViewController *host, NSString *root, NSString *title,
                              NSArray<WQWebEntry *> *_Nullable rootEntries, BOOL uploadable);
 
+// Settings → Sharing Password: a fixed password (kept in the keychain)
+// instead of a new random one each time; nil means random.
+NSString *_Nullable wq_sharing_password(void);
+BOOL wq_set_sharing_password(NSString *_Nullable password);
+// Alert to set, change or remove it; done runs after a change.
+void wq_edit_sharing_password(UIViewController *host, void (^_Nullable done)(void));
+
 // Exposed for tests: maps a URL path below a route ("Documents/a%20b.txt")
 // to path components, or nil when it would leave the folder.
 NSArray<NSString *> *_Nullable WQWebPathComponents(NSString *encoded);

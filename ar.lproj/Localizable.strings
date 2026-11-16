@@ -1013,5 +1013,15 @@
 "Upload Files…" = "رفع ملفات…";
 "Drop files here or use Upload Files. Nothing is overwritten." = "اسحب الملفات إلى هنا أو استخدم رفع ملفات. لا يُستبدل أي شيء.";
 "Allow Uploads" = "السماح بالرفع";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "افتح العنوان في متصفح على كمبيوتر أو هاتف متصل بنفس شبكة Wi-Fi وسجّل الدخول باسم المستخدم وكلمة السر. يمكن فتح الملفات وتنزيلها. تتوقف المشاركة عند إغلاق هذه الشاشة أو مغادرة WQ Files، وتتغير كلمة السر في كل مرة.";
 "Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "السماح بالرفع: يمكن للمتصفح إضافة ملفات إلى هذا المجلد ومجلداته الفرعية. لا يُستبدل أو يُحذف أي شيء: الملف الذي اسمه مستخدم يُحفظ باسم “الاسم 2”.";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files." = "افتح العنوان في متصفح على كمبيوتر أو هاتف متصل بنفس شبكة Wi-Fi وسجّل الدخول باسم المستخدم وكلمة السر. يمكن فتح الملفات وتنزيلها. تتوقف المشاركة عند إغلاق هذه الشاشة أو مغادرة WQ Files.";
+"The password is the one set in Settings → Sharing Password." = "كلمة السر هي المحددة في الإعدادات ← كلمة سر المشاركة.";
+"The password changes each time; set a fixed one in Settings → Sharing Password." = "تتغير كلمة السر في كل مرة؛ حدّد كلمة ثابتة في الإعدادات ← كلمة سر المشاركة.";
+"Sharing Password" = "كلمة سر المشاركة";
+"Fixed" = "ثابتة";
+"Random each time" = "عشوائية في كل مرة";
+"A fixed password for Wi-Fi Sharing. The user is always “wq”." = "كلمة سر ثابتة للمشاركة عبر Wi-Fi. اسم المستخدم دائمًا “wq”.";
+"At least 6 characters." = "6 أحرف على الأقل.";
+"Use Random Password" = "استخدام كلمة سر عشوائية";
+"The password could not be saved in the keychain." = "تعذّر حفظ كلمة السر في سلسلة المفاتيح.";
+"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "كلمة سر المشاركة: كلمة سر ثابتة للمشاركة عبر Wi-Fi بدل كلمة عشوائية جديدة في كل مرة. تُحفظ في سلسلة المفاتيح.";

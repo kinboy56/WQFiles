@@ -1017,5 +1017,15 @@
 "Upload Files…" = "Dosya Yükle…";
 "Drop files here or use Upload Files. Nothing is overwritten." = "Dosyaları buraya bırakın veya Dosya Yükle'yi kullanın. Hiçbir şeyin üzerine yazılmaz.";
 "Allow Uploads" = "Yüklemelere İzin Ver";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Adresi aynı Wi-Fi ağındaki bir bilgisayar veya telefonda tarayıcıda açın ve kullanıcı adı ile parolayla giriş yapın. Dosyalar açılabilir ve indirilebilir. Bu ekranı kapattığınızda veya WQ Files'tan çıktığınızda paylaşım durur ve parola her seferinde değişir.";
 "Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "Yüklemelere İzin Ver: tarayıcı bu klasöre ve alt klasörlerine dosya ekleyebilir. Hiçbir şeyin üzerine yazılmaz veya silinmez: adı kullanılan bir dosya “ad 2” olarak kaydedilir.";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files." = "Adresi aynı Wi-Fi ağındaki bir bilgisayar veya telefonda tarayıcıda açın ve kullanıcı adı ile parolayla giriş yapın. Dosyalar açılabilir ve indirilebilir. Bu ekranı kapattığınızda veya WQ Files'tan çıktığınızda paylaşım durur.";
+"The password is the one set in Settings → Sharing Password." = "Parola, Ayarlar → Paylaşım Parolası'nda belirlenendir.";
+"The password changes each time; set a fixed one in Settings → Sharing Password." = "Parola her seferinde değişir; Ayarlar → Paylaşım Parolası'ndan sabit bir parola belirleyebilirsiniz.";
+"Sharing Password" = "Paylaşım Parolası";
+"Fixed" = "Sabit";
+"Random each time" = "Her seferinde rastgele";
+"A fixed password for Wi-Fi Sharing. The user is always “wq”." = "Wi-Fi Paylaşımı için sabit bir parola. Kullanıcı her zaman “wq”dur.";
+"At least 6 characters." = "En az 6 karakter.";
+"Use Random Password" = "Rastgele Parola Kullan";
+"The password could not be saved in the keychain." = "Parola anahtar zincirine kaydedilemedi.";
+"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Paylaşım Parolası: Wi-Fi Paylaşımı için her seferinde yeni rastgele bir parola yerine sabit bir parola. Anahtar zincirinde saklanır.";

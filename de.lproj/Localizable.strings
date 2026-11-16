@@ -1013,5 +1013,15 @@
 "Upload Files…" = "Dateien hochladen …";
 "Drop files here or use Upload Files. Nothing is overwritten." = "Dateien hierher ziehen oder „Dateien hochladen“ verwenden. Nichts wird überschrieben.";
 "Allow Uploads" = "Uploads erlauben";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "Öffne die Adresse in einem Browser auf einem Computer oder Telefon im selben WLAN und melde dich mit Benutzer und Passwort an. Dateien können geöffnet und geladen werden. Das Teilen endet, wenn du diesen Bildschirm schließt oder WQ Files verlässt, und das Passwort ändert sich jedes Mal.";
 "Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "Uploads erlauben: Der Browser kann Dateien zu diesem Ordner und seinen Unterordnern hinzufügen. Nichts wird überschrieben oder gelöscht: Eine Datei mit einem vergebenen Namen wird als „Name 2“ gespeichert.";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files." = "Öffne die Adresse in einem Browser auf einem Computer oder Telefon im selben WLAN und melde dich mit Benutzer und Passwort an. Dateien können geöffnet und geladen werden. Das Teilen endet, wenn du diesen Bildschirm schließt oder WQ Files verlässt.";
+"The password is the one set in Settings → Sharing Password." = "Das Passwort ist das in Einstellungen → Freigabe-Passwort festgelegte.";
+"The password changes each time; set a fixed one in Settings → Sharing Password." = "Das Passwort ändert sich jedes Mal; ein festes kannst du in Einstellungen → Freigabe-Passwort festlegen.";
+"Sharing Password" = "Freigabe-Passwort";
+"Fixed" = "Fest";
+"Random each time" = "Jedes Mal zufällig";
+"A fixed password for Wi-Fi Sharing. The user is always “wq”." = "Ein festes Passwort für die WLAN-Freigabe. Der Benutzer ist immer „wq“.";
+"At least 6 characters." = "Mindestens 6 Zeichen.";
+"Use Random Password" = "Zufälliges Passwort verwenden";
+"The password could not be saved in the keychain." = "Das Passwort konnte nicht im Schlüsselbund gespeichert werden.";
+"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "Freigabe-Passwort: ein festes Passwort für die WLAN-Freigabe statt jedes Mal eines neuen zufälligen. Es wird im Schlüsselbund gespeichert.";

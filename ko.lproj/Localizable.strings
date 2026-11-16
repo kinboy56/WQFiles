@@ -1017,5 +1017,15 @@
 "Upload Files…" = "파일 업로드…";
 "Drop files here or use Upload Files. Nothing is overwritten." = "파일을 여기에 놓거나 파일 업로드를 사용하세요. 아무것도 덮어쓰지 않습니다.";
 "Allow Uploads" = "업로드 허용";
-"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files, and the password changes each time." = "같은 Wi-Fi에 있는 컴퓨터나 휴대폰의 브라우저에서 주소를 열고 사용자와 암호로 로그인하세요. 파일을 열고 다운로드할 수 있습니다. 이 화면을 닫거나 WQ Files를 나가면 공유가 중단되며, 암호는 매번 바뀝니다.";
 "Allow Uploads: the browser can add files to this folder and its subfolders. Nothing is overwritten or deleted: a file whose name is taken is saved as “name 2”." = "업로드 허용: 브라우저가 이 폴더와 하위 폴더에 파일을 추가할 수 있습니다. 덮어쓰거나 삭제하지 않습니다. 이름이 이미 있는 파일은 “이름 2”로 저장됩니다.";
+"Open the address in a browser on a computer or phone on the same Wi-Fi and sign in with the user and password. Files can be opened and downloaded. Sharing stops when you close this screen or leave WQ Files." = "같은 Wi-Fi에 있는 컴퓨터나 휴대폰의 브라우저에서 주소를 열고 사용자와 암호로 로그인하세요. 파일을 열고 다운로드할 수 있습니다. 이 화면을 닫거나 WQ Files를 나가면 공유가 중단됩니다.";
+"The password is the one set in Settings → Sharing Password." = "암호는 설정 → 공유 암호에서 지정한 암호입니다.";
+"The password changes each time; set a fixed one in Settings → Sharing Password." = "암호는 매번 바뀝니다. 고정 암호는 설정 → 공유 암호에서 지정할 수 있습니다.";
+"Sharing Password" = "공유 암호";
+"Fixed" = "고정";
+"Random each time" = "매번 무작위";
+"A fixed password for Wi-Fi Sharing. The user is always “wq”." = "Wi-Fi 공유용 고정 암호입니다. 사용자는 항상 “wq”입니다.";
+"At least 6 characters." = "6자 이상.";
+"Use Random Password" = "무작위 암호 사용";
+"The password could not be saved in the keychain." = "암호를 키체인에 저장할 수 없습니다.";
+"Sharing Password: a fixed password for Wi-Fi Sharing instead of a new random one each time. It is kept in the keychain." = "공유 암호: 매번 새 무작위 암호 대신 Wi-Fi 공유에 쓸 고정 암호입니다. 키체인에 보관됩니다.";
