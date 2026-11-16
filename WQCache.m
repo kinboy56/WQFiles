@@ -211,6 +211,21 @@ static BOOL WQCacheCrashPathIsSafe(NSString *path)
            [WQCacheSafetyCanonicalPath(path) isEqualToString:expected];
 }
 
+// Why the crash-log path check failed, for the Log: the first ancestor that
+// can't be checked or is a link, or the canonical spelling it resolves to.
+static NSString *WQCacheCrashPathProblem(NSString *path)
+{
+    NSString *prefix = @"/";
+    for (NSString *part in [path.pathComponents subarrayWithRange:NSMakeRange(1, path.pathComponents.count - 1)]) {
+        prefix = [prefix stringByAppendingPathComponent:part];
+        struct stat st = {0};
+        if (lstat(prefix.fileSystemRepresentation, &st) != 0)
+            return [NSString stringWithFormat:@"lstat %@: %s (errno %d)", prefix, strerror(errno), errno];
+        if (S_ISLNK(st.st_mode)) return [NSString stringWithFormat:@"%@ is a symbolic link", prefix];
+    }
+    return [NSString stringWithFormat:@"resolves to %@", WQCacheSafetyCanonicalPath(path)];
+}
+
 static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
 {
     if (item.limited) {
@@ -218,7 +233,9 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
         return NO;
     }
     if (item.crashLogs) {
-        if (item.targetRecords.count != 1 || !WQCacheCrashPathIsSafe(item.targets.firstObject)) {
+        BOOL safe = WQCacheCrashPathIsSafe(item.targets.firstObject) ||
+            (wq_grant(kCrashLogsPath) && WQCacheCrashPathIsSafe(item.targets.firstObject));
+        if (item.targetRecords.count != 1 || !safe) {
             if (reason) *reason = WQLocalized(@"the crash-log target is not the expected canonical directory");
             return NO;
         }
@@ -759,6 +776,13 @@ static BOOL WQCacheValidateItem(WQCacheItem *item, NSString **reason)
         // only. On iOS 26 the section is left out instead of reported as limited.
         BOOL crashReachable = wq_system_areas_reachable();
         BOOL safeCrashPath = crashReachable && WQCacheCrashPathIsSafe(kCrashLogsPath);
+        // The path check reads every ancestor; inside the system group that
+        // needs the folder's sandbox token first (it used to fail silently,
+        // so Crash Logs always showed as limited).
+        if (crashReachable && !safeCrashPath && wq_grant(kCrashLogsPath))
+            safeCrashPath = WQCacheCrashPathIsSafe(kCrashLogsPath);
+        if (crashReachable && !safeCrashPath)
+            wq_log(@"cache scan: Crash Logs path check failed: %@", WQCacheCrashPathProblem(kCrashLogsPath));
         WQCacheMeasurementState crashState = !crashReachable ? WQCacheMeasurementMissing
             : safeCrashPath ? WQCacheMeasureDirectory(kCrashLogsPath, taskID, cancellation, &crash)
                             : WQCacheMeasurementLimited;
