@@ -189,7 +189,7 @@ symbol tile.
 
 ## Themes
 
-**Settings → Theme** sets the colors of the new design: **Default**, **Custom Color** (pick one color, WQ Files derives the rest) or a theme you import. **Plain Background** works with all of them. A theme also colors the Wi-Fi Sharing page.
+**Settings → Theme** sets the colors of the new design: **Default**, **Custom Color** (pick one color, WQ Files derives the rest) or a theme you import. **Plain Background** works with all of them, and **Colored Cards** (on by default) tints the start screen's cards in the color of their icon. A theme also colors the Wi-Fi Sharing page.
 
 A theme is a small JSON file with the extension `.wqtheme`. Open one with WQ Files (share sheet or Files app) or use **Import Theme…**; **Export Current Colors…** writes the colors you use now as a starting point. WQ Files comes with the two themes in [`themes/`](themes) (Midnight and Sunset) built in; an imported theme with the same name replaces the built-in one.
 
@@ -222,6 +222,7 @@ A theme is a small JSON file with the extension `.wqtheme`. Open one with WQ Fil
 | `accent` | Buttons, tabs and links. |
 | `card` | A tint laid over the cards' blur. |
 | `plain` | The solid color used with Plain Background (default: the first background color). |
+| `tiles` | Top level, next to `name`: colors of the icon tiles (and Colored Cards) by name: `blue`, `sky`, `violet`, `indigo`, `mint`, `amber`, `orange`, `pink`, `gray`, or `all` for every tile not named. One color or two (gradient), e.g. `"tiles": {"sky": ["#8AD9FF", "#2C94E8"], "all": "#5B3FE0"}`. |
 
 Colors are `#RRGGBB` or `#RRGGBBAA`. Unknown keys are ignored, files over 64 KB are refused, and WQ Files names the problem when a file isn't valid. Themes change colors only, not the layout.
 

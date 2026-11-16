@@ -4274,6 +4274,8 @@ static UIBarButtonItem *wq_recent_bar_button(UIViewController *host)
 
 static NSArray<UIColor *> *WQPrismTone(NSString *tone)
 {
+    NSArray<UIColor *> *themed = wq_theme_tile_colors(tone ?: @"blue");
+    if (themed.count == 2) return themed;
     if ([tone isEqualToString:@"violet"]) return @[[UIColor colorWithRed:0.71 green:0.61 blue:1.00 alpha:1], [UIColor colorWithRed:0.43 green:0.31 blue:0.91 alpha:1]];
     if ([tone isEqualToString:@"mint"])   return @[[UIColor colorWithRed:0.38 green:0.92 blue:0.80 alpha:1], [UIColor colorWithRed:0.04 green:0.67 blue:0.55 alpha:1]];
     if ([tone isEqualToString:@"amber"])  return @[[UIColor colorWithRed:1.00 green:0.84 blue:0.54 alpha:1], [UIColor colorWithRed:0.88 green:0.55 blue:0.09 alpha:1]];
@@ -4356,6 +4358,13 @@ static NSArray<UIColor *> *WQPrismTone(NSString *tone)
 @implementation WQPrismIconTile {
     CAGradientLayer *_gradient;
     UIImageView *_imageView;
+    NSString *_tone;
+}
+
+- (void)themeChanged
+{
+    NSArray<UIColor *> *colors = WQPrismTone(_tone);
+    _gradient.colors = @[(id)colors[0].CGColor, (id)colors[1].CGColor];
 }
 
 - (instancetype)initWithSymbol:(NSString *)symbol tone:(NSString *)tone size:(CGFloat)size
@@ -4366,12 +4375,14 @@ static NSArray<UIColor *> *WQPrismTone(NSString *tone)
         self.layer.cornerRadius = size * 0.29;
         self.layer.cornerCurve = kCACornerCurveContinuous;
         self.clipsToBounds = YES;
-        NSArray<UIColor *> *colors = WQPrismTone(tone);
+        _tone = [tone copy];
         _gradient = [CAGradientLayer layer];
         _gradient.startPoint = CGPointMake(0.0, 0.0);
         _gradient.endPoint = CGPointMake(1.0, 1.0);
-        _gradient.colors = @[(id)colors[0].CGColor, (id)colors[1].CGColor];
         [self.layer addSublayer:_gradient];
+        [self themeChanged];
+        [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(themeChanged)
+                                                   name:WQThemeChangedNotification object:nil];
 
         UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:size * 0.44
                                                                                          weight:UIImageSymbolWeightSemibold];
@@ -4415,6 +4426,28 @@ static NSArray<UIColor *> *WQPrismTone(NSString *tone)
     WQPrismGlassView *_glass;
     WQPrismIconTile *_icon;
     UIImageView *_chevron;
+    CAGradientLayer *_tint;   // Colored Cards: the icon's color, fading across the card
+    NSString *_tone;
+}
+
+- (void)updateTint
+{
+    _tint.hidden = !wq_colored_cards();
+    if (_tint.hidden) return;
+    NSArray<UIColor *> *colors = WQPrismTone(_tone);
+    BOOL dark = self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
+    _tint.colors = @[(id)[colors[1] colorWithAlphaComponent:dark ? 0.34 : 0.22].CGColor,
+                     (id)[colors[0] colorWithAlphaComponent:dark ? 0.12 : 0.08].CGColor,
+                     (id)UIColor.clearColor.CGColor];
+}
+
+- (void)layoutSubviews
+{
+    [super layoutSubviews];
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    _tint.frame = self.bounds;
+    [CATransaction commit];
 }
 
 - (instancetype)initWithTitle:(NSString *)title
@@ -4437,6 +4470,18 @@ static NSArray<UIColor *> *WQPrismTone(NSString *tone)
             [_glass.leadingAnchor constraintEqualToAnchor:self.leadingAnchor],
             [_glass.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
         ]];
+        _tone = [tone copy];
+        _tint = [CAGradientLayer layer];
+        _tint.startPoint = CGPointMake(0.0, 0.0);
+        _tint.endPoint = CGPointMake(1.0, 1.0);
+        _tint.locations = @[@0.0, @0.45, @1.0];
+        _tint.cornerRadius = compact ? 20 : 24;
+        _tint.cornerCurve = kCACornerCurveContinuous;
+        [_glass.layer addSublayer:_tint];   // over the blur, under the content
+        [self updateTint];
+        [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(updateTint)
+                                                   name:WQThemeChangedNotification object:nil];
+        [self registerForTraitChanges:@[UITraitUserInterfaceStyle.class] withAction:@selector(updateTint)];
 
         _icon = [[WQPrismIconTile alloc] initWithSymbol:symbol tone:tone size:compact ? 30 : 36];
         [self addSubview:_icon];
@@ -4779,7 +4824,12 @@ static void wq_apply_design(void);
     _quickButton = [UIButton buttonWithConfiguration:quickCfg primaryAction:[UIAction actionWithHandler:^(UIAction *__unused a) {
         [weakSelf runHealthCheck];
     }]];
-    _quickButton.tintColor = [UIColor colorWithRed:0.42 green:0.53 blue:1.0 alpha:1.0];
+    _quickButton.tintColor = wq_theme_accent();
+    [NSNotificationCenter.defaultCenter addObserverForName:WQThemeChangedNotification object:nil queue:NSOperationQueue.mainQueue
+                                                usingBlock:^(NSNotification *__unused n) {
+        typeof(self) me = weakSelf;
+        if (me) me->_quickButton.tintColor = wq_theme_accent();
+    }];
 
     UIButtonConfiguration *logCfg = [UIButtonConfiguration plainButtonConfiguration];
     logCfg.attributedTitle = WQPrismButtonTitle(WQLocalizedNullable(@"Log"));

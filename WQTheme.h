@@ -20,6 +20,12 @@
 //      "card":   tint over the cards' blur              (optional)
 //      "plain":  the solid color for Plain Background   (optional)
 //
+//  Top level, optional:
+//      "tiles": { "sky": ["#8AD9FF", "#2C94E8"], "mint": "#12B39A", … }
+//               colors of the icon tiles (and Colored Cards) by name:
+//               blue, sky, violet, indigo, mint, amber, orange, pink, gray,
+//               or "all" for every tile not named. One color or two.
+//
 //  Colors are #RRGGBB or #RRGGBBAA. Unknown keys are ignored. Files over
 //  64 KB, missing names or malformed colors are refused with the reason.
 //
@@ -44,6 +50,8 @@ extern NSString *const WQThemeCustomColor;   // tinted from the picked color
 // Shipped with WQ Files (themes/ in the repository): can't be deleted.
 @property (nonatomic, readonly) BOOL builtIn;
 - (WQThemeAppearance *)appearanceDark:(BOOL)dark;
+// Icon tile colors by tone name (and "all"), each [top, bottom].
+@property (nonatomic, copy, readonly, nullable) NSDictionary<NSString *, NSArray<UIColor *> *> *tiles;
 @end
 
 // Parses and checks a theme file; nil with a reason when it isn't valid.
@@ -69,6 +77,12 @@ NSData *wq_theme_export_current(NSString *name);
 UIColor *wq_theme_accent(void);
 // Tint over the cards' blur, or nil for the default.
 UIColor *_Nullable wq_theme_card(void);
+// The active theme's [top, bottom] colors for an icon tile tone, or nil.
+NSArray<UIColor *> *_Nullable wq_theme_tile_colors(NSString *tone);
+// Settings → Theme → Colored Cards (on by default): start screen cards take
+// on their icon's color.
+BOOL wq_colored_cards(void);
+void wq_set_colored_cards(BOOL on);
 
 // Settings → Theme screen.
 UIViewController *wq_theme_settings_controller(void);

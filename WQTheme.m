@@ -22,6 +22,7 @@ static const NSUInteger kWQThemeMaxBytes = 64 * 1024;
 @property (nonatomic, copy, readwrite) NSString *identifier, *name;
 @property (nonatomic, copy, readwrite, nullable) NSString *author;
 @property (nonatomic, readwrite) BOOL builtIn;
+@property (nonatomic, copy, readwrite, nullable) NSDictionary<NSString *, NSArray<UIColor *> *> *tiles;
 @property (nonatomic, strong) WQThemeAppearance *dark, *light;
 @end
 
@@ -129,12 +130,27 @@ WQTheme *wq_theme_parse(NSData *data, NSString **errorText)
         WQThemeAppearance *light = json[@"light"] ? WQThemeParseAppearance(json[@"light"], @"light", &error) : nil;
         if (error) break;
         if (!dark && !light) { error = WQLocalized(@"The theme needs “dark” or “light” colors."); break; }
+        NSMutableDictionary<NSString *, NSArray<UIColor *> *> *tiles = nil;
+        id rawTiles = json[@"tiles"];
+        if (rawTiles && ![rawTiles isKindOfClass:NSDictionary.class]) { error = WQLocalizedFormat(@"“%@” must be an object.", @"tiles"); break; }
+        for (NSString *tone in rawTiles) {
+            if (![tone isKindOfClass:NSString.class]) continue;
+            id value = rawTiles[tone];
+            NSArray *stops = [value isKindOfClass:NSArray.class] ? value : @[value];
+            UIColor *top = stops.count >= 1 && stops.count <= 2 ? WQThemeColor(stops.firstObject) : nil;
+            UIColor *bottom = top ? WQThemeColor(stops.lastObject) : nil;
+            if (!top || !bottom) { error = WQLocalizedFormat(@"“%@”: not a color: %@", @"tiles", stops.firstObject ?: tone); break; }
+            if (!tiles) tiles = [NSMutableDictionary new];
+            tiles[tone.lowercaseString] = @[top, bottom];
+        }
+        if (error) break;
         theme = [WQTheme new];
         theme.name = name;
         theme.author = author.length ? author : nil;
         theme.identifier = WQThemeIdentifier(name);
         theme.dark = dark ?: light;
         theme.light = light ?: dark;
+        theme.tiles = tiles;
     } while (0);
     if (errorText) *errorText = error;
     return theme;
@@ -276,6 +292,14 @@ NSData *wq_theme_export_current(NSString *name)
         if (card) appearance[@"card"] = WQThemeHex([card resolvedColorWithTraitCollection:traits]);
         json[dark.boolValue ? @"dark" : @"light"] = appearance;
     }
+    WQTheme *active = wq_active_theme();
+    if (active.tiles.count) {
+        NSMutableDictionary *tiles = [NSMutableDictionary new];
+        [active.tiles enumerateKeysAndObjectsUsingBlock:^(NSString *tone, NSArray<UIColor *> *colors, BOOL *__unused stop) {
+            tiles[tone] = @[WQThemeHex(colors[0]), WQThemeHex(colors[1])];
+        }];
+        json[@"tiles"] = tiles;
+    }
     return [NSJSONSerialization dataWithJSONObject:json options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys error:nil] ?: [NSData data];
 }
 
@@ -286,6 +310,25 @@ UIColor *wq_theme_accent(void)
         UIColor *accent = [theme appearanceDark:traits.userInterfaceStyle == UIUserInterfaceStyleDark].accent;
         return accent ?: [UIColor colorWithRed:0.37 green:0.50 blue:1.0 alpha:1.0];
     }];
+}
+
+NSArray<UIColor *> *wq_theme_tile_colors(NSString *tone)
+{
+    NSDictionary *tiles = wq_active_theme().tiles;
+    return tiles[tone] ?: tiles[@"all"];
+}
+
+static NSString *const kWQColoredCardsOffPref = @"WQColoredCardsOff";
+
+BOOL wq_colored_cards(void)
+{
+    return ![NSUserDefaults.standardUserDefaults boolForKey:kWQColoredCardsOffPref];
+}
+
+void wq_set_colored_cards(BOOL on)
+{
+    [NSUserDefaults.standardUserDefaults setBool:!on forKey:kWQColoredCardsOffPref];
+    WQThemeChanged();
 }
 
 UIColor *wq_theme_card(void)
@@ -348,7 +391,7 @@ typedef NS_ENUM(NSInteger, WQThemeSection) { WQThemeSectionThemes, WQThemeSectio
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
     if (section == WQThemeSectionThemes) return 2 + (NSInteger)_installed.count;
-    return section == WQThemeSectionPlain ? 1 : 2;
+    return 2;   // Plain Background + Colored Cards, or Import + Export
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
@@ -356,7 +399,8 @@ typedef NS_ENUM(NSInteger, WQThemeSection) { WQThemeSectionThemes, WQThemeSectio
     if (section == WQThemeSectionThemes)
         return WQLocalized(@"Tap a theme to use it. Long-press or swipe a theme to share it, or to delete an imported one. Themes also color the Wi-Fi Sharing page.");
     if (section == WQThemeSectionPlain)
-        return WQLocalized(@"Plain Background: a plain black (or white) background instead of the colored one.");
+        return [NSString stringWithFormat:@"%@\n\n%@", WQLocalized(@"Plain Background: a plain black (or white) background instead of the colored one."),
+                WQLocalized(@"Colored Cards: the cards on the start screen take on the color of their icon.")];
     return WQLocalized(@"A theme is a small .wqtheme file (JSON) with colors for dark and light mode. Export Current Colors gives you one to start from; the format is described in the README on GitHub. Open a .wqtheme file with WQ Files to install it.");
 }
 
@@ -411,12 +455,15 @@ typedef NS_ENUM(NSInteger, WQThemeSection) { WQThemeSectionThemes, WQThemeSectio
             cell.accessoryView = swatch;
         }
     } else if (indexPath.section == WQThemeSectionPlain) {
-        c.text = WQLocalized(@"Plain Background");
-        c.image = [UIImage systemImageNamed:@"square.fill"];
+        BOOL plain = indexPath.row == 0;
+        c.text = WQLocalized(plain ? @"Plain Background" : @"Colored Cards");
+        c.image = [UIImage systemImageNamed:plain ? @"square.fill" : @"square.grid.2x2.fill"];
         UISwitch *toggle = [UISwitch new];
-        toggle.on = wq_prism_plain_background();
+        toggle.on = plain ? wq_prism_plain_background() : wq_colored_cards();
         [toggle addAction:[UIAction actionWithHandler:^(UIAction *action) {
-            wq_set_prism_plain_background(((UISwitch *)action.sender).isOn);
+            BOOL on = ((UISwitch *)action.sender).isOn;
+            if (plain) wq_set_prism_plain_background(on);
+            else wq_set_colored_cards(on);
         }] forControlEvents:UIControlEventValueChanged];
         cell.accessoryView = toggle;
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
