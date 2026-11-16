@@ -21,6 +21,15 @@
       "category": "utilities",
       "versions": [
         {
+          "version": "0.9.13",
+          "buildVersion": "96",
+          "date": "2026-11-16",
+          "size": 2053060,
+          "downloadURL": "https://github.com/kolbicz/WQFiles/releases/download/v0.9.13/WQFiles.ipa",
+          "localizedDescription": "Apps and Cache Cleaner scans are fast again (more than twice as fast as 0.9.11 and 0.9.12).",
+          "minOSVersion": "26.0"
+        },
+        {
           "version": "0.9.12",
           "buildVersion": "94",
           "date": "2026-11-16",
