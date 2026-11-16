@@ -11,6 +11,13 @@ int main(void)
 {
     @autoreleasepool {
         NSFileManager *fm = NSFileManager.defaultManager;
+        NSString *lcReal = @"/private/var/mobile/Containers/Shared/AppGroup/B1E3527C-AA70-4F5C-A443-410B7D47ABBE";
+        check([WQGroupRootForPath([lcReal stringByAppendingString:@"/LiveContainer/Data/AppGroup/group.com.rileytestut.AltStore.X"]) isEqualToString:lcReal], @"LiveContainer stand-in maps to the real group");
+        check([WQGroupRootForPath(@"/var/mobile/Containers/Shared/AppGroup/ABC/LiveContainer/Data/AppGroup/g") isEqualToString:@"/var/mobile/Containers/Shared/AppGroup/ABC"], @"/var alias accepted");
+        check([WQGroupRootForPath(lcReal) isEqualToString:lcReal], @"plain group path unchanged");
+        check([WQGroupRootForPath(@"/private/var/mobile/Containers/Data/Application/X/LiveContainer/Data/AppGroup/g") hasSuffix:@"/g"], @"stand-in outside Shared/AppGroup unchanged");
+        check([WQGroupRootForPath(@"/private/var/mobile/Containers/Shared/AppGroup/A/B/LiveContainer/Data/AppGroup/g") hasSuffix:@"/g"], @"nested real group unchanged");
+        check(WQGroupRootForPath(nil) == nil, @"nil path");
         check(!WQWorseQueryPatchedBuild(@"24C5037i"), @"27.3 beta 1 not patched");
         check(WQWorseQueryPatchedBuild(@"24C5049d"), @"27.3 beta 2 patched");
         check(WQWorseQueryPatchedBuild(@"24C5060a"), @"27.3 later beta patched");

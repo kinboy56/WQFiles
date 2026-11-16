@@ -291,6 +291,11 @@ and only change what you understand.
   can't help); the iOS version row warns about it even if some folders still
   open. Stay on 27.3 beta 1 or earlier.
 
+- **LiveContainer**: inside LiveContainer, iOS reports WQ Files' App Group as
+  a stand-in folder in LiveContainer's own group, while access tokens are
+  issued for the real group folder. WQ Files uses the real one (Log:
+  `App group: LiveContainer stand-in …; using the real group folder …`).
+
 - **Every folder refused (`token cache recovery failed`)**: WQ Files briefly
   swaps its own `Library/Caches` folder in the App Group to get each access
   token. If a swap was interrupted, or another app sharing the App Group

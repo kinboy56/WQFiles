@@ -440,6 +440,22 @@ static inline NSString *WQIdentityAttributeIdentifier(NSData *value)
     }
     return found;
 }
+// The App Group folder the container manager hands out tokens for. Inside
+// LiveContainer, NSFileManager returns a stand-in under LiveContainer's own
+// group (<real group>/LiveContainer/Data/AppGroup/<id>); the token is for the
+// real group's Library/Caches, so swapping the stand-in never works (#65).
+static inline NSString *WQGroupRootForPath(NSString *path)
+{
+    if (!path.length) return nil;
+    NSRange lc = [path rangeOfString:@"/LiveContainer/Data/AppGroup/"];
+    if (lc.location == NSNotFound) return path;
+    NSString *real = [path substringToIndex:lc.location];
+    // Only a container directly under Shared/AppGroup qualifies.
+    NSString *parent = WQCanonicalVarPath(real.stringByDeletingLastPathComponent);
+    if (![parent isEqualToString:@"/private/var/mobile/Containers/Shared/AppGroup"]) return path;
+    return real;
+}
+
 // Apple patched worse_query in iOS 27.3 beta 2 (build 24C5049d; beta 1 was
 // 24C5037i and still works). `build` is kern.osversion, e.g. "24C5049d":
 // iOS major - 3 as a number, a letter per minor-release train, then the build

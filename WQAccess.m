@@ -107,6 +107,32 @@ typedef struct __SecTask *SecTaskRef;
 extern SecTaskRef SecTaskCreateFromSelf(CFAllocatorRef allocator);
 extern CFTypeRef SecTaskCopyValueForEntitlement(SecTaskRef task, CFStringRef entitlement, CFErrorRef *error);
 
+static NSString *wq_group_root(NSString *group)
+{
+    if (!group) return nil;
+    static NSMutableDictionary<NSString *, NSString *> *roots;
+    @synchronized (NSFileManager.class) {
+        if (roots[group]) return roots[group];
+    }
+    NSString *path = [NSFileManager.defaultManager containerURLForSecurityApplicationGroupIdentifier:group].path;
+    NSString *root = WQGroupRootForPath(path);
+    if (root && ![root isEqualToString:path]) {
+        struct stat st;
+        if (lstat(root.fileSystemRepresentation, &st) == 0 && S_ISDIR(st.st_mode))
+            wq_log(@"App group: LiveContainer stand-in %@; using the real group folder %@", path, root);
+        else {
+            wq_log(@"App group: LiveContainer stand-in %@, but the real group folder %@ can't be reached (%@)", path, root, wq_errno(errno));
+            root = path;
+        }
+    }
+    if (!root) return nil;
+    @synchronized (NSFileManager.class) {
+        if (!roots) roots = [NSMutableDictionary new];
+        roots[group] = root;
+    }
+    return root;
+}
+
 NSString *wq_app_group(void)
 {
     static NSString *group;
@@ -121,11 +147,11 @@ NSString *wq_app_group(void)
         }
         for (id candidate in groups) {
             if (![candidate isKindOfClass:NSString.class]) continue;
-            NSURL *root = [NSFileManager.defaultManager containerURLForSecurityApplicationGroupIdentifier:candidate];
+            NSString *root = wq_group_root(candidate);
             if (root) {
                 group = candidate;
-                if (!WQRecoverCacheSwapAtPath([root.path stringByAppendingPathComponent:@"Library"]))
-                    wq_log(@"App-group cache recovery requires attention; preserved contents retained: %@ (%@)", root.path, wq_errno(errno));
+                if (!WQRecoverCacheSwapAtPath([root stringByAppendingPathComponent:@"Library"]))
+                    wq_log(@"App-group cache recovery requires attention; preserved contents retained: %@ (%@)", root, wq_errno(errno));
                 break;
             }
         }
@@ -249,9 +275,9 @@ static int64_t wq_query(NSString *target, BOOL altFlags)
     NSString *group = wq_app_group();
     if (!group) return -1;
     NSFileManager *files = NSFileManager.defaultManager;
-    NSURL *root = [files containerURLForSecurityApplicationGroupIdentifier:group];
+    NSString *root = wq_group_root(group);
     if (!root) return -1;
-    NSString *libraryPath = [root.path stringByAppendingPathComponent:@"Library"];
+    NSString *libraryPath = [root stringByAppendingPathComponent:@"Library"];
     if (![files createDirectoryAtPath:libraryPath withIntermediateDirectories:YES attributes:nil error:nil]) return -4;
     int library = WQOpenDirectoryNoLinks(libraryPath);
     if (library < 0) return -4;
@@ -298,9 +324,9 @@ static int64_t wq_query(NSString *target, BOOL altFlags)
 BOOL wq_reset_access_cache(NSString **errorText)
 {
     NSString *group = wq_app_group();
-    NSURL *root = group ? [NSFileManager.defaultManager containerURLForSecurityApplicationGroupIdentifier:group] : nil;
+    NSString *root = wq_group_root(group);
     if (!root) { if (errorText) *errorText = WQLocalized(@"The App Group is missing."); return NO; }
-    NSString *libraryPath = [root.path stringByAppendingPathComponent:@"Library"];
+    NSString *libraryPath = [root stringByAppendingPathComponent:@"Library"];
     [NSFileManager.defaultManager createDirectoryAtPath:libraryPath withIntermediateDirectories:YES attributes:nil error:nil];
     int library = WQOpenDirectoryNoLinks(libraryPath);
     if (library < 0) { if (errorText) *errorText = wq_errno(errno); return NO; }
@@ -2529,8 +2555,8 @@ static BOOL wq_fsgetpath_sees_others(fsid_t fsid, int64_t maxInode, double *idsP
     NSString *bundle = wq_norm(NSBundle.mainBundle.bundlePath.stringByDeletingLastPathComponent);
     if (bundle.length) [own addObject:bundle];
     NSString *group = wq_app_group();
-    NSURL *groupURL = group ? [NSFileManager.defaultManager containerURLForSecurityApplicationGroupIdentifier:group] : nil;
-    if (groupURL.path.length) [own addObject:wq_norm(groupURL.path)];
+    NSString *groupRoot = wq_group_root(group);
+    if (groupRoot.length) [own addObject:wq_norm(groupRoot)];
     int64_t stride = MAX((int64_t)1, maxInode / 20000);
     NSUInteger sampled = 0, resolved = 0, foreign = 0;
     NSCountedSet<NSString *> *areas = [NSCountedSet new];
