@@ -975,3 +975,6 @@
 "Pause Scan" = "إيقاف الفحص مؤقتًا";
 "Resume Scan" = "استئناف الفحص";
 "Could not save scan state. Keep WQ Files open." = "تعذّر حفظ حالة الفحص. أبقِ WQ Files مفتوحًا.";
+"Background Color" = "لون الخلفية";
+"Default Colors" = "الألوان الافتراضية";
+"Background Color: tints the background, colored or plain, with a color you pick. Default Colors brings back the original look." = "لون الخلفية: يلوّن الخلفية، الملونة أو العادية، باللون الذي تختاره. الألوان الافتراضية تعيد المظهر الأصلي.";

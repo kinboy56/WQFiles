@@ -979,3 +979,6 @@
 "Pause Scan" = "หยุดการสแกนชั่วคราว";
 "Resume Scan" = "สแกนต่อ";
 "Could not save scan state. Keep WQ Files open." = "บันทึกสถานะการสแกนไม่ได้ โปรดเปิด WQ Files ค้างไว้";
+"Background Color" = "สีพื้นหลัง";
+"Default Colors" = "สีเริ่มต้น";
+"Background Color: tints the background, colored or plain, with a color you pick. Default Colors brings back the original look." = "สีพื้นหลัง: แต่งสีพื้นหลัง ทั้งแบบสีสันและแบบเรียบ ด้วยสีที่คุณเลือก สีเริ่มต้นจะคืนรูปลักษณ์ดั้งเดิม";

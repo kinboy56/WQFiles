@@ -979,3 +979,6 @@
 "Pause Scan" = "Pause Scan";
 "Resume Scan" = "Resume Scan";
 "Could not save scan state. Keep WQ Files open." = "Could not save scan state. Keep WQ Files open.";
+"Background Color" = "Background Color";
+"Default Colors" = "Default Colors";
+"Background Color: tints the background, colored or plain, with a color you pick. Default Colors brings back the original look." = "Background Color: tints the background, colored or plain, with a color you pick. Default Colors brings back the original look.";

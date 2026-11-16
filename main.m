@@ -5176,7 +5176,8 @@ static NSString *const kWQTroubleshootingFooter =
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    return section == 0 ? 7 : section == 1 ? 3 : 1;
+    // Rows 7 and 8: Background Color, and Default Colors once one is picked.
+    return section == 0 ? (wq_prism_background_color() ? 9 : 8) : section == 1 ? 3 : 1;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
@@ -5188,11 +5189,12 @@ static NSString *const kWQTroubleshootingFooter =
 {
     if (section == 2) return WQLocalized(kWQTroubleshootingFooter);
     if (section != 0) return nil;
-    return [NSString stringWithFormat:@"%@\n\n%@\n\n%@\n\n%@",
+    return [NSString stringWithFormat:@"%@\n\n%@\n\n%@\n\n%@\n\n%@",
             WQLocalized(@"Allow Deleting: when off, nothing can be deleted: no Delete or swipe to delete in folders and backups, no Clear Data in Apps and no cleaning in the Cache Cleaner. Saving, moving and restoring still work.\n\nShow Item Counts: shows how many items each folder holds. Every subfolder has to be listed for this, which slows down folders with many subfolders, especially in other apps' data."),
             WQLocalized(@"Keep Data Before Restore: restoring an app or file backup first backs up what's there now, so a failed restore can be undone. When off, that backup is deleted once the restore succeeded."),
             WQLocalized(@"Reopen Last Folder: WQ Files starts in the folder you were in. Check for Updates: twice a day WQ Files reads the public release list on GitHub and shows a note when a new version is out; nothing about your device is sent."),
-            WQLocalized(@"Plain Background: a plain black (or white) background instead of the colored one.")];
+            WQLocalized(@"Plain Background: a plain black (or white) background instead of the colored one."),
+            WQLocalized(@"Background Color: tints the background, colored or plain, with a color you pick. Default Colors brings back the original look.")];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -5203,6 +5205,31 @@ static NSString *const kWQTroubleshootingFooter =
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
     UIListContentConfiguration *c = [UIListContentConfiguration subtitleCellConfiguration];
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    if (indexPath.section == 0 && indexPath.row >= 7) {
+        if (indexPath.row == 7) {
+            c.text = WQLocalizedNullable(@"Background Color");
+            c.image = [UIImage systemImageNamed:@"paintpalette"];
+            UIColorWell *well = [[UIColorWell alloc] initWithFrame:CGRectMake(0, 0, 32, 32)];
+            well.supportsAlpha = NO;
+            well.title = WQLocalizedNullable(@"Background Color");
+            well.selectedColor = wq_prism_background_color() ?: [UIColor colorWithRed:0.30 green:0.42 blue:0.95 alpha:1];
+            __weak typeof(self) weakSelf = self;
+            [well addAction:[UIAction actionWithHandler:^(UIAction *action) {
+                BOOL had = wq_prism_background_color() != nil;
+                wq_set_prism_background_color(((UIColorWell *)action.sender).selectedColor);
+                if (!had) [weakSelf.tableView insertRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:8 inSection:0]]
+                                                     withRowAnimation:UITableViewRowAnimationFade];
+            }] forControlEvents:UIControlEventValueChanged];
+            cell.accessoryView = well;
+            cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        } else {
+            c.text = WQLocalizedNullable(@"Default Colors");
+            c.image = [UIImage systemImageNamed:@"arrow.uturn.backward"];
+            c.textProperties.color = self.view.tintColor;
+        }
+        cell.contentConfiguration = c;
+        return cell;
+    }
     if (indexPath.section == 0) {
         NSArray<NSString *> *titles = @[@"Allow Deleting", @"Show Item Counts", @"Keep Data Before Restore", @"Reopen Last Folder", @"Check for Updates", @"New Design", @"Plain Background"];
         NSArray<NSString *> *symbols = @[@"trash.slash", @"number", @"clock.arrow.circlepath", @"arrow.uturn.forward", @"arrow.down.circle", @"paintbrush", @"square.fill"];
@@ -5259,6 +5286,11 @@ static NSString *const kWQTroubleshootingFooter =
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    if (indexPath.section == 0 && indexPath.row == 8) {
+        wq_set_prism_background_color(nil);
+        [tableView reloadSections:[NSIndexSet indexSetWithIndex:0] withRowAnimation:UITableViewRowAnimationFade];
+        return;
+    }
     if (indexPath.section == 0) return;
     if (indexPath.section == 2) { wq_confirm_reset_access_cache(self, nil); return; }
     if (indexPath.row == 0) {

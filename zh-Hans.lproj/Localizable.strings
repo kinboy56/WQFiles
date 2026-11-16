@@ -979,3 +979,6 @@
 "Pause Scan" = "暂停扫描";
 "Resume Scan" = "继续扫描";
 "Could not save scan state. Keep WQ Files open." = "无法保存扫描状态。请保持 WQ Files 打开。";
+"Background Color" = "背景颜色";
+"Default Colors" = "默认颜色";
+"Background Color: tints the background, colored or plain, with a color you pick. Default Colors brings back the original look." = "背景颜色：用你选择的颜色为背景（彩色或纯色）着色。默认颜色可恢复原始外观。";

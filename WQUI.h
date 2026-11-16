@@ -51,6 +51,10 @@ void wq_set_prism_enabled(BOOL enabled);
 // backdrop at once.
 BOOL wq_prism_plain_background(void);
 void wq_set_prism_plain_background(BOOL plain);
+// Settings → Background Color: tints the glows (or, with Plain Background, the
+// whole backdrop) with one picked color; nil restores the default colors.
+UIColor *_Nullable wq_prism_background_color(void);
+void wq_set_prism_background_color(UIColor *_Nullable color);
 
 
 

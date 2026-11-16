@@ -979,3 +979,6 @@
 "Pause Scan" = "Pausar varredura";
 "Resume Scan" = "Retomar varredura";
 "Could not save scan state. Keep WQ Files open." = "Não foi possível salvar o estado da varredura. Mantenha o WQ Files aberto.";
+"Background Color" = "Cor do fundo";
+"Default Colors" = "Cores padrão";
+"Background Color: tints the background, colored or plain, with a color you pick. Default Colors brings back the original look." = "Cor do fundo: tinge o fundo, colorido ou simples, com uma cor que você escolher. Cores padrão restaura a aparência original.";

@@ -979,3 +979,6 @@
 "Scan queued; previous results kept" = "Đã xếp hàng quét; giữ kết quả trước đó";
 "Last scanned %@ · Pull to refresh" = "Quét lần cuối %@ · Kéo để làm mới";
 "Could not save scan state. Keep WQ Files open." = "Không thể lưu trạng thái quét. Hãy giữ WQ Files mở.";
+"Background Color" = "Màu nền";
+"Default Colors" = "Màu mặc định";
+"Background Color: tints the background, colored or plain, with a color you pick. Default Colors brings back the original look." = "Màu nền: tô màu nền, nhiều màu hoặc trơn, bằng màu bạn chọn. Màu mặc định khôi phục giao diện ban đầu.";

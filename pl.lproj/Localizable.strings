@@ -979,3 +979,6 @@
 "Pause Scan" = "Wstrzymaj skanowanie";
 "Resume Scan" = "Wznów skanowanie";
 "Could not save scan state. Keep WQ Files open." = "Nie można zapisać stanu skanowania. Nie zamykaj WQ Files.";
+"Background Color" = "Kolor tła";
+"Default Colors" = "Domyślne kolory";
+"Background Color: tints the background, colored or plain, with a color you pick. Default Colors brings back the original look." = "Kolor tła: barwi tło, kolorowe lub jednolite, wybranym kolorem. Domyślne kolory przywracają pierwotny wygląd.";

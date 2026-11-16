@@ -979,3 +979,6 @@
 "Pause Scan" = "Taramayı Duraklat";
 "Resume Scan" = "Taramaya Devam Et";
 "Could not save scan state. Keep WQ Files open." = "Tarama durumu kaydedilemedi. WQ Files'ı açık tutun.";
+"Background Color" = "Arka Plan Rengi";
+"Default Colors" = "Varsayılan Renkler";
+"Background Color: tints the background, colored or plain, with a color you pick. Default Colors brings back the original look." = "Arka Plan Rengi: renkli veya düz arka planı seçtiğiniz renge boyar. Varsayılan Renkler orijinal görünümü geri getirir.";

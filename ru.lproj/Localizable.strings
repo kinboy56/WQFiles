@@ -979,3 +979,6 @@
 "Pause Scan" = "Приостановить сканирование";
 "Resume Scan" = "Продолжить сканирование";
 "Could not save scan state. Keep WQ Files open." = "Не удалось сохранить состояние сканирования. Не закрывайте WQ Files.";
+"Background Color" = "Цвет фона";
+"Default Colors" = "Стандартные цвета";
+"Background Color: tints the background, colored or plain, with a color you pick. Default Colors brings back the original look." = "Цвет фона: окрашивает фон, цветной или простой, в выбранный вами цвет. «Стандартные цвета» возвращает исходный вид.";

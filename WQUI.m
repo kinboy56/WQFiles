@@ -431,6 +431,37 @@ void wq_set_prism_plain_background(BOOL plain)
     [NSNotificationCenter.defaultCenter postNotificationName:kWQPrismBackgroundChanged object:nil];
 }
 
+static NSString *const kWQBackgroundColorPref = @"WQBackgroundColor";   // @[r, g, b] in sRGB
+
+UIColor *wq_prism_background_color(void)
+{
+    NSArray *rgb = [NSUserDefaults.standardUserDefaults arrayForKey:kWQBackgroundColorPref];
+    if (rgb.count != 3) return nil;
+    for (id v in rgb) if (![v isKindOfClass:NSNumber.class]) return nil;
+    return [UIColor colorWithRed:[rgb[0] doubleValue] green:[rgb[1] doubleValue] blue:[rgb[2] doubleValue] alpha:1];
+}
+
+void wq_set_prism_background_color(UIColor *color)
+{
+    CGFloat r = 0, g = 0, b = 0, a = 0;
+    if (color && [color getRed:&r green:&g blue:&b alpha:&a])
+        [NSUserDefaults.standardUserDefaults setObject:@[@(MIN(1, MAX(0, r))), @(MIN(1, MAX(0, g))), @(MIN(1, MAX(0, b)))]
+                                                forKey:kWQBackgroundColorPref];
+    else
+        [NSUserDefaults.standardUserDefaults removeObjectForKey:kWQBackgroundColorPref];
+    [NSNotificationCenter.defaultCenter postNotificationName:kWQPrismBackgroundChanged object:nil];
+}
+
+// The picked color's hue and saturation with a brightness that keeps text
+// readable: deep in dark mode, pale in light mode.
+static UIColor *wq_tinted(UIColor *color, BOOL dark, CGFloat level, CGFloat alpha)
+{
+    CGFloat h = 0, s = 0, v = 0, a = 0;
+    [color getHue:&h saturation:&s brightness:&v alpha:&a];
+    return dark ? [UIColor colorWithHue:h saturation:s * 0.75 brightness:MIN(v, 1.0) * level alpha:alpha]
+                : [UIColor colorWithHue:h saturation:s * level brightness:1.0 alpha:alpha];
+}
+
 // WQ Prism: a soft layered backdrop shared by the redesigned screens.
 @interface WQPrismBackgroundView : UIView
 @end
@@ -470,14 +501,35 @@ void wq_set_prism_plain_background(BOOL plain)
 - (void)updateColors
 {
     BOOL plain = wq_prism_plain_background();
+    BOOL dark = self.traitCollection.userInterfaceStyle != UIUserInterfaceStyleLight;
+    UIColor *custom = wq_prism_background_color();
     for (CAGradientLayer *g in _glows) g.hidden = plain;
+    if (plain && custom) {
+        UIColor *color = wq_tinted(custom, dark, dark ? 0.32 : 0.14, 1);
+        _base.colors = @[(id)color.CGColor, (id)color.CGColor];
+        return;
+    }
+    if (custom) {
+        // Glows in the picked hue and two neighbours, on a base tinted the same way.
+        CGFloat h = 0, s = 0, v = 0, a = 0;
+        [custom getHue:&h saturation:&s brightness:&v alpha:&a];
+        CGFloat hues[4] = {h, fmod(h + 0.06, 1), fmod(h + 0.94, 1), fmod(h + 0.12, 1)};
+        CGFloat alphas[4] = {dark ? 0.62 : 0.48, dark ? 0.48 : 0.38, dark ? 0.32 : 0.30, dark ? 0.24 : 0.24};
+        UIColor *top = wq_tinted(custom, dark, dark ? 0.08 : 0.06, 1), *bottom = wq_tinted(custom, dark, dark ? 0.16 : 0.12, 1);
+        _base.colors = @[(id)top.CGColor, (id)bottom.CGColor];
+        for (NSUInteger i = 0; i < 4; i++) {
+            UIColor *glow = dark ? [UIColor colorWithHue:hues[i] saturation:MAX(s, 0.15) * 0.85 brightness:MAX(v, 0.35) * 0.95 alpha:alphas[i]]
+                                 : [UIColor colorWithHue:hues[i] saturation:MAX(s, 0.15) * 0.45 brightness:1.0 alpha:alphas[i]];
+            _glows[i].colors = @[(id)glow.CGColor, (id)[UIColor clearColor].CGColor];
+        }
+        return;
+    }
     if (plain) {
         // Plain black (dark) or white (light), like the classic design.
         UIColor *color = [UIColor.systemBackgroundColor resolvedColorWithTraitCollection:self.traitCollection];
         _base.colors = @[(id)color.CGColor, (id)color.CGColor];
         return;
     }
-    BOOL dark = self.traitCollection.userInterfaceStyle != UIUserInterfaceStyleLight;
     if (dark) {
         _base.colors = @[(id)[UIColor colorWithRed:0.024 green:0.033 blue:0.062 alpha:1].CGColor,
                          (id)[UIColor colorWithRed:0.043 green:0.063 blue:0.125 alpha:1].CGColor];
