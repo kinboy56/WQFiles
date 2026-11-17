@@ -117,6 +117,19 @@ static const NSUInteger kWQWebMaxConnections = 12;
 static const size_t kWQWebChunk = 256 * 1024;
 static NSString *const kWQUploadStagePrefix = @".wq-upload-";
 
+// `base` + `suffix` (+ "." `ext`) within the 255-byte name limit, cutting
+// whole characters off the end of `base` when needed.
+NSString *WQUploadCandidate(NSString *base, NSString *ext, NSString *suffix)
+{
+    NSString *tail = ext.length ? [NSString stringWithFormat:@"%@.%@", suffix, ext] : suffix;
+    NSString *head = base;
+    while (head.length && [head stringByAppendingString:tail].UTF8String && strlen([head stringByAppendingString:tail].UTF8String) > 255) {
+        NSRange last = [head rangeOfComposedCharacterSequenceAtIndex:head.length - 1];
+        head = [head substringToIndex:last.location];
+    }
+    return [head stringByAppendingString:tail];
+}
+
 NSArray<NSString *> *WQWebPathComponents(NSString *encoded)
 {
     NSMutableArray<NSString *> *out = [NSMutableArray new];
@@ -537,9 +550,12 @@ static BOOL WQWebSend(int fd, const void *bytes, size_t length)
     NSString *base = name.stringByDeletingPathExtension, *ext = name.pathExtension;
     NSString *finalName = nil;
     NSDictionary *identity = wq_item_identity(stage);
-    for (NSUInteger i = 1; identity && i < 1000 && !finalName && !_stopped; i++) {
-        NSString *candidate = i == 1 ? name : [NSString stringWithFormat:@"%@ %lu", base, (unsigned long)i];
-        if (i > 1 && ext.length) candidate = [candidate stringByAppendingPathExtension:ext];
+    // "name 2", "name 3"… up to 999, then a random suffix; the name part is
+    // shortened when a suffix would make it longer than 255 bytes (DR-28).
+    for (NSUInteger i = 1; identity && i <= 1000 && !finalName && !_stopped; i++) {
+        NSString *candidate = i == 1 ? name
+            : WQUploadCandidate(base, ext, i < 1000 ? [NSString stringWithFormat:@" %lu", (unsigned long)i]
+                                                    : [@" " stringByAppendingString:[NSUUID.UUID.UUIDString substringToIndex:8]]);
         [_publishLock lock];
         BOOL permitted = !_stopped && self.allowUploads;
         BOOL published = permitted && wq_rename_expecting(stage, candidate, identity, &error);

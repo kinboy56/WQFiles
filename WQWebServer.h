@@ -58,6 +58,8 @@ void wq_edit_sharing_password(UIViewController *host, void (^_Nullable done)(voi
 // Exposed for tests: maps a URL path below a route ("Documents/a%20b.txt")
 // to path components, or nil when it would leave the folder.
 NSArray<NSString *> *_Nullable WQWebPathComponents(NSString *encoded);
+// A non-overwriting upload name: base + suffix (+ .ext), at most 255 bytes.
+NSString *WQUploadCandidate(NSString *base, NSString *ext, NSString *suffix);
 NSString *WQWebHTMLEscape(NSString *text);
 
 NS_ASSUME_NONNULL_END
