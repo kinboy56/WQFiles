@@ -111,6 +111,23 @@ typedef struct __SecTask *SecTaskRef;
 extern SecTaskRef SecTaskCreateFromSelf(CFAllocatorRef allocator);
 extern CFTypeRef SecTaskCopyValueForEntitlement(SecTaskRef task, CFStringRef entitlement, CFErrorRef *error);
 
+static int64_t wq_query_token_ex(NSString *group, BOOL altFlags, BOOL consumeIt, NSString **covered);
+
+// The App Group folder a token is issued for, read from an unused token
+// (its last field is ".../AppGroup/<UUID>/Library/Caches"). Under
+// LiveContainer this is the only reliable answer: the container manager
+// gives no path and LiveContainer's stand-in can be anywhere (#65).
+static NSString *wq_token_group_root(NSString *group)
+{
+    for (int alt = 0; alt < 2; alt++) {
+        NSString *covered = nil;
+        (void)wq_query_token_ex(group, alt == 1, NO, &covered);
+        NSString *root = WQGroupRootFromTokenPath(covered);
+        if (root) return root;
+    }
+    return nil;
+}
+
 // The group container's path as the container manager knows it: the one
 // worse_query's token is issued for. nil when it can't be asked.
 static NSString *wq_cm_group_path(NSString *group)
@@ -168,6 +185,25 @@ static NSString *wq_group_root(NSString *group)
         wq_log(@"App group: container manager agrees on %@", managed);
     } else {
         wq_log(@"App group: the container manager gave no path for %@", group);
+    }
+    // What a token is really issued for decides; NSFileManager's answer can
+    // be a stand-in (LiveContainer).
+    NSString *tokenRoot = wq_token_group_root(group);
+    if (tokenRoot && path.length && ![tokenRoot isEqualToString:WQCanonicalVarPath(path)]) {
+        struct stat st;
+        if (lstat(tokenRoot.fileSystemRepresentation, &st) == 0 && S_ISDIR(st.st_mode)) {
+            wq_log(@"App group: access tokens are issued for %@; using it instead of %@", tokenRoot, path);
+            @synchronized (NSFileManager.class) {
+                if (!roots) roots = [NSMutableDictionary new];
+                roots[group] = tokenRoot;
+            }
+            return tokenRoot;
+        }
+        wq_log(@"App group: tokens are issued for %@, but it can't be reached (%@)", tokenRoot, wq_errno(errno));
+    } else if (tokenRoot) {
+        wq_log(@"App group: access tokens are issued for this folder");
+    } else {
+        wq_log(@"App group: an access token didn't say which folder it is for");
     }
     NSString *root = WQGroupRootForPath(path);
     if (root && ![root isEqualToString:path]) {
@@ -233,6 +269,14 @@ static void wq_release_handle(int64_t handle);
 
 static int64_t wq_query_token(NSString *group, BOOL altFlags)
 {
+    return wq_query_token_ex(group, altFlags, YES, NULL);
+}
+
+// `consumeIt` NO: only ask, for *covered (the path the token is issued for,
+// its last field) without using the token.
+static int64_t wq_query_token_ex(NSString *group, BOOL altFlags, BOOL consumeIt, NSString **covered)
+{
+    if (covered) *covered = nil;
     static void *mgr;
     static cq_create_fn create;
     static cq_set_u64_fn setClass, setFlags, setPart;
@@ -287,6 +331,12 @@ static int64_t wq_query_token(NSString *group, BOOL altFlags)
             wq_log(@"grant: token (%@ flags) covers: %@", altFlags ? @"other" : @"standard",
                    cut.location == NSNotFound ? @"(unreadable)" : [text substringFromIndex:NSMaxRange(cut)]);
         }
+        if (token && covered) {
+            NSString *text = @(token) ?: @"";
+            NSRange last = [text rangeOfString:@";" options:NSBackwardsSearch];
+            if (last.location != NSNotFound) *covered = [text substringFromIndex:NSMaxRange(last)];
+        }
+        if (!consumeIt) return token ? 0 : (result ? -6 : -5);
         int64_t handle = token ? consume(token) : (result ? -6 : -5);
         return token && handle < 0 ? -7 : handle;
     } @finally {

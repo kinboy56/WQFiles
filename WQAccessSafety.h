@@ -456,6 +456,21 @@ static inline NSString *WQGroupRootForPath(NSString *path)
     return real;
 }
 
+// The group container root from the path an App Group token covers:
+// "/private/var/mobile/Containers/Shared/AppGroup/<one name>/Library/Caches"
+// gives ".../AppGroup/<one name>"; anything else gives nil.
+static inline NSString *WQGroupRootFromTokenPath(NSString *path)
+{
+    if (!path.length) return nil;
+    NSString *p = WQCanonicalVarPath(path);
+    if (![p hasSuffix:@"/Library/Caches"]) return nil;
+    NSString *root = [p substringToIndex:p.length - @"/Library/Caches".length];
+    if (![root.stringByDeletingLastPathComponent isEqualToString:@"/private/var/mobile/Containers/Shared/AppGroup"]) return nil;
+    NSString *name = root.lastPathComponent;
+    if (!name.length || [name isEqualToString:@"."] || [name isEqualToString:@".."]) return nil;
+    return root;
+}
+
 // Apple patched worse_query in iOS 27.3 beta 2 (build 24C5049d; beta 1 was
 // 24C5037i and still works). `build` is kern.osversion, e.g. "24C5049d":
 // iOS major - 3 as a number, a letter per minor-release train, then the build

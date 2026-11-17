@@ -18,6 +18,12 @@ int main(void)
         check([WQGroupRootForPath(@"/private/var/mobile/Containers/Data/Application/X/LiveContainer/Data/AppGroup/g") hasSuffix:@"/g"], @"stand-in outside Shared/AppGroup unchanged");
         check([WQGroupRootForPath(@"/private/var/mobile/Containers/Shared/AppGroup/A/B/LiveContainer/Data/AppGroup/g") hasSuffix:@"/g"], @"nested real group unchanged");
         check(WQGroupRootForPath(nil) == nil, @"nil path");
+        check([WQGroupRootFromTokenPath(@"/private/var/mobile/Containers/Shared/AppGroup/E4D186B4-F6D2-477F-9850-0F96AAF59A49/Library/Caches")
+               isEqualToString:@"/private/var/mobile/Containers/Shared/AppGroup/E4D186B4-F6D2-477F-9850-0F96AAF59A49"], @"token path gives the group root");
+        check(WQGroupRootFromTokenPath(@"/private/var/mobile/Containers/Data/InternalDaemon/X/Library/Caches") == nil, @"token for another container is ignored");
+        check(WQGroupRootFromTokenPath(@"/private/var/mobile/Containers/Shared/AppGroup/A/B/Library/Caches") == nil, @"nested token path is ignored");
+        check(WQGroupRootFromTokenPath(@"/private/var/mobile/Containers/Shared/AppGroup/A/Library") == nil, @"token path without Caches is ignored");
+        check(WQGroupRootFromTokenPath(nil) == nil, @"no token path");
         check(!WQWorseQueryPatchedBuild(@"24C5037i"), @"27.3 beta 1 not patched");
         check(WQWorseQueryPatchedBuild(@"24C5049d"), @"27.3 beta 2 patched");
         check(WQWorseQueryPatchedBuild(@"24C5060a"), @"27.3 later beta patched");
