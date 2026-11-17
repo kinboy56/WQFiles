@@ -1074,3 +1074,11 @@
 "None of %lu sampled app folders could be opened. Apple patched worse_query, the sandbox escape WQ Files is built on, in iOS 27.3 beta 2, so it can't work on this build (%@). It works up to iOS 27.3 beta 1 and on iOS 26." = "No se pudo abrir ninguna de las %lu carpetas de apps comprobadas. Apple corrigió worse_query, el escape del sandbox en el que se basa WQ Files, en iOS 27.3 beta 2, así que no puede funcionar en esta compilación (%@). Funciona hasta iOS 27.3 beta 1 y en iOS 26.";
 "iOS %@ (%@): Apple patched worse_query in iOS 27.3 beta 2. Folders that still open here may stop opening." = "iOS %@ (%@): Apple corrigió worse_query en iOS 27.3 beta 2. Las carpetas que aún se abren aquí pueden dejar de abrirse.";
 "Invert Selection" = "Invertir selección";
+"%@ is not a regular file, so the restored database could open with other data. Remove it and restore again." = "%@ no es un archivo normal, así que la base de datos restaurada podría abrir otros datos. Elimínalo y vuelve a restaurar.";
+"%@ could not be reset: %@" = "No se pudo restablecer %@: %@";
+"Allow Deleting was turned off, so nothing was deleted." = "Permitir eliminar se desactivó, así que no se eliminó nada.";
+"Stopped" = "Detenido";
+"Stopped after %lu files were deleted. Copies of deleted files are in Backups; the rest is still there." = "Detenido después de eliminar %lu archivos. Las copias de los archivos eliminados están en Copias de seguridad; el resto sigue ahí.";
+"The text can't be stored as UTF-8, so nothing was changed." = "El texto no se puede guardar como UTF-8, así que no se cambió nada.";
+"This XML property list can only store dates to the second, and a date here has a fraction of a second. Remove the fraction from the date, then save again. Nothing was saved." = "Esta lista de propiedades XML solo puede guardar fechas al segundo, y una fecha aquí tiene una fracción de segundo. Quita la fracción de la fecha y vuelve a guardar. No se guardó nada.";
+"The property list is too large to edit (maximum %lu MiB)." = "La lista de propiedades es demasiado grande para editarla (máximo %lu MiB).";

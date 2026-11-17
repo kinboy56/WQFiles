@@ -1074,3 +1074,11 @@
 "None of %lu sampled app folders could be opened. Apple patched worse_query, the sandbox escape WQ Files is built on, in iOS 27.3 beta 2, so it can't work on this build (%@). It works up to iOS 27.3 beta 1 and on iOS 26." = "확인한 앱 폴더 %lu개 중 하나도 열 수 없습니다. Apple이 iOS 27.3 베타 2에서 WQ Files의 기반인 샌드박스 탈출 기법 worse_query를 막았기 때문에 이 빌드(%@)에서는 작동하지 않습니다. iOS 27.3 베타 1까지와 iOS 26에서는 작동합니다.";
 "iOS %@ (%@): Apple patched worse_query in iOS 27.3 beta 2. Folders that still open here may stop opening." = "iOS %@ (%@): Apple이 iOS 27.3 베타 2에서 worse_query를 막았습니다. 여기서 아직 열리는 폴더도 열리지 않게 될 수 있습니다.";
 "Invert Selection" = "선택 반전";
+"%@ is not a regular file, so the restored database could open with other data. Remove it and restore again." = "%@은(는) 일반 파일이 아니므로 복원된 데이터베이스가 다른 데이터를 열 수 있습니다. 해당 파일을 제거하고 다시 복원하세요.";
+"%@ could not be reset: %@" = "%@을(를) 재설정할 수 없습니다: %@";
+"Allow Deleting was turned off, so nothing was deleted." = "삭제 허용이 꺼져 있어 아무것도 삭제하지 않았습니다.";
+"Stopped" = "중지됨";
+"Stopped after %lu files were deleted. Copies of deleted files are in Backups; the rest is still there." = "파일 %lu개를 삭제한 뒤 중지했습니다. 삭제된 파일의 사본은 백업에 있으며, 나머지는 그대로 있습니다.";
+"The text can't be stored as UTF-8, so nothing was changed." = "텍스트를 UTF-8로 저장할 수 없어 아무것도 변경하지 않았습니다.";
+"This XML property list can only store dates to the second, and a date here has a fraction of a second. Remove the fraction from the date, then save again. Nothing was saved." = "이 XML 속성 목록은 날짜를 초 단위까지만 저장할 수 있는데, 여기 있는 날짜에 1초 미만의 값이 있습니다. 날짜에서 소수 부분을 지운 뒤 다시 저장하세요. 아무것도 저장하지 않았습니다.";
+"The property list is too large to edit (maximum %lu MiB)." = "속성 목록이 너무 커서 편집할 수 없습니다(최대 %lu MiB).";

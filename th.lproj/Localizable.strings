@@ -1074,3 +1074,11 @@
 "None of %lu sampled app folders could be opened. Apple patched worse_query, the sandbox escape WQ Files is built on, in iOS 27.3 beta 2, so it can't work on this build (%@). It works up to iOS 27.3 beta 1 and on iOS 26." = "ไม่สามารถเปิดโฟลเดอร์แอปที่ตรวจ %lu โฟลเดอร์ได้เลย Apple ได้ปิดช่องโหว่ worse_query ซึ่งเป็นวิธีหลุดแซนด์บ็อกซ์ที่ WQ Files ใช้ ใน iOS 27.3 beta 2 จึงใช้งานบนบิลด์นี้ (%@) ไม่ได้ ใช้งานได้ถึง iOS 27.3 beta 1 และบน iOS 26";
 "iOS %@ (%@): Apple patched worse_query in iOS 27.3 beta 2. Folders that still open here may stop opening." = "iOS %@ (%@): Apple ได้ปิดช่องโหว่ worse_query ใน iOS 27.3 beta 2 โฟลเดอร์ที่ยังเปิดได้ที่นี่อาจเปิดไม่ได้อีก";
 "Invert Selection" = "สลับการเลือก";
+"%@ is not a regular file, so the restored database could open with other data. Remove it and restore again." = "%@ ไม่ใช่ไฟล์ปกติ ฐานข้อมูลที่กู้คืนจึงอาจเปิดข้อมูลอื่นได้ โปรดลบไฟล์นั้นแล้วกู้คืนอีกครั้ง";
+"%@ could not be reset: %@" = "รีเซ็ต %@ ไม่ได้: %@";
+"Allow Deleting was turned off, so nothing was deleted." = "อนุญาตให้ลบ ถูกปิดอยู่ จึงไม่มีการลบสิ่งใด";
+"Stopped" = "หยุดแล้ว";
+"Stopped after %lu files were deleted. Copies of deleted files are in Backups; the rest is still there." = "หยุดหลังจากลบไฟล์ไปแล้ว %lu ไฟล์ สำเนาของไฟล์ที่ลบอยู่ใน ข้อมูลสำรอง ส่วนที่เหลือยังอยู่";
+"The text can't be stored as UTF-8, so nothing was changed." = "ไม่สามารถบันทึกข้อความเป็น UTF-8 ได้ จึงไม่มีการเปลี่ยนแปลงใด";
+"This XML property list can only store dates to the second, and a date here has a fraction of a second. Remove the fraction from the date, then save again. Nothing was saved." = "รายการคุณสมบัติ XML นี้เก็บวันที่ได้ละเอียดถึงระดับวินาทีเท่านั้น และวันที่ในนี้มีเศษของวินาที โปรดลบเศษวินาทีออกจากวันที่ แล้วบันทึกอีกครั้ง ไม่มีการบันทึกสิ่งใด";
+"The property list is too large to edit (maximum %lu MiB)." = "รายการคุณสมบัติใหญ่เกินกว่าจะแก้ไขได้ (สูงสุด %lu MiB)";

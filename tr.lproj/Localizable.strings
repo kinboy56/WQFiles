@@ -1074,3 +1074,11 @@
 "None of %lu sampled app folders could be opened. Apple patched worse_query, the sandbox escape WQ Files is built on, in iOS 27.3 beta 2, so it can't work on this build (%@). It works up to iOS 27.3 beta 1 and on iOS 26." = "Denetlenen %lu uygulama klasörünün hiçbiri açılamadı. Apple, WQ Files'ın dayandığı sandbox kaçışı worse_query'yi iOS 27.3 beta 2'de kapattı; bu yüzden bu derlemede (%@) çalışamaz. iOS 27.3 beta 1'e kadar ve iOS 26'da çalışır.";
 "iOS %@ (%@): Apple patched worse_query in iOS 27.3 beta 2. Folders that still open here may stop opening." = "iOS %@ (%@): Apple, worse_query'yi iOS 27.3 beta 2'de kapattı. Burada hâlâ açılan klasörler açılmamaya başlayabilir.";
 "Invert Selection" = "Seçimi Tersine Çevir";
+"%@ is not a regular file, so the restored database could open with other data. Remove it and restore again." = "%@ normal bir dosya değil, bu yüzden geri yüklenen veritabanı başka verileri açabilir. Onu kaldırın ve yeniden geri yükleyin.";
+"%@ could not be reset: %@" = "%@ sıfırlanamadı: %@";
+"Allow Deleting was turned off, so nothing was deleted." = "Silmeye İzin Ver kapatıldı, bu yüzden hiçbir şey silinmedi.";
+"Stopped" = "Durduruldu";
+"Stopped after %lu files were deleted. Copies of deleted files are in Backups; the rest is still there." = "%lu dosya silindikten sonra durduruldu. Silinen dosyaların kopyaları Yedekler'de; geri kalanı hâlâ yerinde.";
+"The text can't be stored as UTF-8, so nothing was changed." = "Metin UTF-8 olarak kaydedilemiyor, bu yüzden hiçbir şey değiştirilmedi.";
+"This XML property list can only store dates to the second, and a date here has a fraction of a second. Remove the fraction from the date, then save again. Nothing was saved." = "Bu XML özellik listesi tarihleri yalnızca saniye hassasiyetinde saklayabilir ve buradaki bir tarihte saniyenin kesri var. Tarihten kesri kaldırın, sonra yeniden kaydedin. Hiçbir şey kaydedilmedi.";
+"The property list is too large to edit (maximum %lu MiB)." = "Özellik listesi düzenlemek için çok büyük (en fazla %lu MiB).";

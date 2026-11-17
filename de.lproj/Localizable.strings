@@ -1070,3 +1070,11 @@
 "None of %lu sampled app folders could be opened. Apple patched worse_query, the sandbox escape WQ Files is built on, in iOS 27.3 beta 2, so it can't work on this build (%@). It works up to iOS 27.3 beta 1 and on iOS 26." = "Keiner der %lu geprüften App-Ordner ließ sich öffnen. Apple hat worse_query, den Sandbox-Ausbruch, auf dem WQ Files aufbaut, in iOS 27.3 Beta 2 geschlossen, daher funktioniert es auf diesem Build (%@) nicht. Es funktioniert bis iOS 27.3 Beta 1 und unter iOS 26.";
 "iOS %@ (%@): Apple patched worse_query in iOS 27.3 beta 2. Folders that still open here may stop opening." = "iOS %@ (%@): Apple hat worse_query in iOS 27.3 Beta 2 geschlossen. Ordner, die sich hier noch öffnen, können bald nicht mehr aufgehen.";
 "Invert Selection" = "Auswahl umkehren";
+"%@ is not a regular file, so the restored database could open with other data. Remove it and restore again." = "%@ ist keine normale Datei, daher könnte die wiederhergestellte Datenbank andere Daten öffnen. Entferne sie und stelle erneut wieder her.";
+"%@ could not be reset: %@" = "%@ konnte nicht zurückgesetzt werden: %@";
+"Allow Deleting was turned off, so nothing was deleted." = "„Löschen erlauben“ wurde ausgeschaltet, daher wurde nichts gelöscht.";
+"Stopped" = "Gestoppt";
+"Stopped after %lu files were deleted. Copies of deleted files are in Backups; the rest is still there." = "Gestoppt, nachdem %lu Dateien gelöscht wurden. Kopien der gelöschten Dateien liegen in „Backups“; der Rest ist noch da.";
+"The text can't be stored as UTF-8, so nothing was changed." = "Der Text lässt sich nicht als UTF-8 speichern, daher wurde nichts geändert.";
+"This XML property list can only store dates to the second, and a date here has a fraction of a second. Remove the fraction from the date, then save again. Nothing was saved." = "Diese XML-Property-List kann Datumswerte nur sekundengenau speichern, und ein Datum hier hat Sekundenbruchteile. Entferne den Bruchteil aus dem Datum und speichere erneut. Es wurde nichts gespeichert.";
+"The property list is too large to edit (maximum %lu MiB)." = "Die Property-List ist zu groß zum Bearbeiten (maximal %lu MiB).";

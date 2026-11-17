@@ -1074,3 +1074,11 @@
 "None of %lu sampled app folders could be opened. Apple patched worse_query, the sandbox escape WQ Files is built on, in iOS 27.3 beta 2, so it can't work on this build (%@). It works up to iOS 27.3 beta 1 and on iOS 26." = "Nenhuma das %lu pastas de apps verificadas pôde ser aberta. A Apple corrigiu o worse_query, a fuga do sandbox na qual o WQ Files se baseia, no iOS 27.3 beta 2, então ele não funciona nesta build (%@). Funciona até o iOS 27.3 beta 1 e no iOS 26.";
 "iOS %@ (%@): Apple patched worse_query in iOS 27.3 beta 2. Folders that still open here may stop opening." = "iOS %@ (%@): a Apple corrigiu o worse_query no iOS 27.3 beta 2. Pastas que ainda abrem aqui podem deixar de abrir.";
 "Invert Selection" = "Inverter seleção";
+"%@ is not a regular file, so the restored database could open with other data. Remove it and restore again." = "%@ não é um arquivo comum, então o banco de dados restaurado poderia abrir outros dados. Remova-o e restaure novamente.";
+"%@ could not be reset: %@" = "Não foi possível redefinir %@: %@";
+"Allow Deleting was turned off, so nothing was deleted." = "Permitir apagar foi desativado, então nada foi apagado.";
+"Stopped" = "Interrompido";
+"Stopped after %lu files were deleted. Copies of deleted files are in Backups; the rest is still there." = "Interrompido depois que %lu arquivos foram apagados. Cópias dos arquivos apagados estão em Backups; o resto continua lá.";
+"The text can't be stored as UTF-8, so nothing was changed." = "O texto não pode ser salvo como UTF-8, então nada foi alterado.";
+"This XML property list can only store dates to the second, and a date here has a fraction of a second. Remove the fraction from the date, then save again. Nothing was saved." = "Esta lista de propriedades XML só consegue guardar datas com precisão de segundos, e uma data aqui tem fração de segundo. Remova a fração da data e salve de novo. Nada foi salvo.";
+"The property list is too large to edit (maximum %lu MiB)." = "A lista de propriedades é grande demais para editar (máximo de %lu MiB).";

@@ -1074,3 +1074,11 @@
 "None of %lu sampled app folders could be opened. Apple patched worse_query, the sandbox escape WQ Files is built on, in iOS 27.3 beta 2, so it can't work on this build (%@). It works up to iOS 27.3 beta 1 and on iOS 26." = "Không mở được thư mục nào trong %lu thư mục ứng dụng đã kiểm tra. Apple đã vá worse_query, kỹ thuật thoát sandbox mà WQ Files dựa vào, trong iOS 27.3 beta 2, nên ứng dụng không thể hoạt động trên bản dựng này (%@). Ứng dụng hoạt động đến iOS 27.3 beta 1 và trên iOS 26.";
 "iOS %@ (%@): Apple patched worse_query in iOS 27.3 beta 2. Folders that still open here may stop opening." = "iOS %@ (%@): Apple đã vá worse_query trong iOS 27.3 beta 2. Các thư mục vẫn mở được ở đây có thể sẽ không mở được nữa.";
 "Invert Selection" = "Đảo ngược lựa chọn";
+"%@ is not a regular file, so the restored database could open with other data. Remove it and restore again." = "%@ không phải là tệp thông thường, nên cơ sở dữ liệu được khôi phục có thể mở dữ liệu khác. Hãy xóa nó và khôi phục lại.";
+"%@ could not be reset: %@" = "Không thể đặt lại %@: %@";
+"Allow Deleting was turned off, so nothing was deleted." = "Cho phép Xóa đã bị tắt, nên không có gì bị xóa.";
+"Stopped" = "Đã dừng";
+"Stopped after %lu files were deleted. Copies of deleted files are in Backups; the rest is still there." = "Đã dừng sau khi xóa %lu tệp. Bản sao của các tệp đã xóa nằm trong Bản sao lưu; phần còn lại vẫn còn đó.";
+"The text can't be stored as UTF-8, so nothing was changed." = "Không thể lưu văn bản dưới dạng UTF-8, nên không có gì thay đổi.";
+"This XML property list can only store dates to the second, and a date here has a fraction of a second. Remove the fraction from the date, then save again. Nothing was saved." = "Danh sách thuộc tính XML này chỉ lưu được ngày giờ chính xác đến giây, và một ngày ở đây có phần lẻ của giây. Hãy bỏ phần lẻ khỏi ngày, rồi lưu lại. Chưa có gì được lưu.";
+"The property list is too large to edit (maximum %lu MiB)." = "Danh sách thuộc tính quá lớn để chỉnh sửa (tối đa %lu MiB).";
