@@ -1139,6 +1139,29 @@ static void WQAppScanWatch(WQScanCancellation *cancellation, NSUInteger lastSeri
 {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     if (_busy || !self.visibleApps.count) return;
+    // With the search keyboard up, the app's menu (a popover on the row) was
+    // laid out around the keyboard and broke when it went away. Put the
+    // keyboard away first and open the menu once it's gone.
+    UISearchBar *searchBar = self.navigationItem.searchController.searchBar;
+    if (searchBar.isFirstResponder) {
+        WQAppItem *tapped = self.visibleApps[(NSUInteger)indexPath.row];
+        [searchBar resignFirstResponder];
+        __weak typeof(self) weakSelf = self;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            typeof(self) strongSelf = weakSelf;
+            if (!strongSelf) return;
+            // An active search counts as presented; anything else means
+            // something opened meanwhile.
+            UIViewController *presented = strongSelf.presentedViewController;
+            if (presented && presented != strongSelf.navigationItem.searchController) return;
+            NSUInteger row = [strongSelf.visibleApps indexOfObjectIdenticalTo:tapped];
+            if (row == NSNotFound) return;
+            NSIndexPath *again = [NSIndexPath indexPathForRow:(NSInteger)row inSection:indexPath.section];
+            [strongSelf.tableView scrollToRowAtIndexPath:again atScrollPosition:UITableViewScrollPositionNone animated:NO];
+            [strongSelf tableView:strongSelf.tableView didSelectRowAtIndexPath:again];
+        });
+        return;
+    }
     WQAppItem *app = self.visibleApps[(NSUInteger)indexPath.row];
     if (!app.hasAccess || !app.bundleID.length || !app.hasIdentity) {
         NSString *why = app.hasAccess && app.bundleID.length && !app.hasIdentity
