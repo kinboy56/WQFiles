@@ -276,6 +276,17 @@ static int64_t wq_query_token(NSString *group, BOOL altFlags)
             wq_log(@"grant: token query answers for %s", p && p[0] ? p : "(no path)");
         });
         token = result ? copyToken(result) : NULL;
+        // For the Log, the first few times: what the token covers. Its fields
+        // after the signature are the extension class, flags, inode and the
+        // path it was issued for; the signature (first field) is left out.
+        static int described;
+        if (token && described < 3) {
+            described++;
+            NSString *text = @(token) ?: @"";
+            NSRange cut = [text rangeOfString:@";"];
+            wq_log(@"grant: token (%@ flags) covers: %@", altFlags ? @"other" : @"standard",
+                   cut.location == NSNotFound ? @"(unreadable)" : [text substringFromIndex:NSMaxRange(cut)]);
+        }
         int64_t handle = token ? consume(token) : (result ? -6 : -5);
         return token && handle < 0 ? -7 : handle;
     } @finally {
