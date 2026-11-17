@@ -158,6 +158,12 @@ static NSString *wq_cm_group_path(NSString *group)
     return found.length ? found : nil;
 }
 
+static BOOL wq_is_dir(NSString *path)
+{
+    struct stat st;
+    return path.length && lstat(path.fileSystemRepresentation, &st) == 0 && S_ISDIR(st.st_mode);
+}
+
 static NSString *wq_group_root(NSString *group)
 {
     if (!group) return nil;
@@ -166,53 +172,37 @@ static NSString *wq_group_root(NSString *group)
         if (roots[group]) return roots[group];
     }
     NSString *path = [NSFileManager.defaultManager containerURLForSecurityApplicationGroupIdentifier:group].path;
-    // Ask the container manager first: under LiveContainer the stand-in sits
-    // in LiveContainer's own group container, which needn't be the container
-    // of this group (#65, 0.9.16 Log).
-    NSString *managed = WQCanonicalVarPath(wq_cm_group_path(group) ?: @"");
-    if (managed.length && path.length && ![managed isEqualToString:WQCanonicalVarPath(path)]) {
-        struct stat st;
-        if (lstat(managed.fileSystemRepresentation, &st) == 0 && S_ISDIR(st.st_mode)) {
-            wq_log(@"App group: %@ is at %@ for the container manager; NSFileManager says %@. Using the container manager's.", group, managed, path);
-            @synchronized (NSFileManager.class) {
-                if (!roots) roots = [NSMutableDictionary new];
-                roots[group] = managed;
-            }
-            return managed;
-        }
-        wq_log(@"App group: the container manager's %@ for %@ can't be reached (%@)", managed, group, wq_errno(errno));
-    } else if (managed.length) {
-        wq_log(@"App group: container manager agrees on %@", managed);
-    } else {
-        wq_log(@"App group: the container manager gave no path for %@", group);
-    }
-    // What a token is really issued for decides; NSFileManager's answer can
-    // be a stand-in (LiveContainer).
+    NSString *root = nil;
+    // 1. The folder access tokens are really issued for decides (#65).
+    //    Under LiveContainer, NSFileManager's answer is a stand-in for every
+    //    group except the one LiveContainer itself uses.
     NSString *tokenRoot = wq_token_group_root(group);
-    if (tokenRoot && path.length && ![tokenRoot isEqualToString:WQCanonicalVarPath(path)]) {
-        struct stat st;
-        if (lstat(tokenRoot.fileSystemRepresentation, &st) == 0 && S_ISDIR(st.st_mode)) {
-            wq_log(@"App group: access tokens are issued for %@; using it instead of %@", tokenRoot, path);
-            @synchronized (NSFileManager.class) {
-                if (!roots) roots = [NSMutableDictionary new];
-                roots[group] = tokenRoot;
-            }
-            return tokenRoot;
-        }
-        wq_log(@"App group: tokens are issued for %@, but it can't be reached (%@)", tokenRoot, wq_errno(errno));
+    if (tokenRoot && wq_is_dir(tokenRoot)) {
+        root = tokenRoot;
+        if (!path.length) wq_log(@"App group %@: NSFileManager gives no folder; access tokens are issued for %@", group, tokenRoot);
+        else if (![tokenRoot isEqualToString:WQCanonicalVarPath(path)])
+            wq_log(@"App group %@: access tokens are issued for %@; using it instead of %@", group, tokenRoot, path);
+        else wq_log(@"App group %@: access tokens are issued for its folder", group);
     } else if (tokenRoot) {
-        wq_log(@"App group: access tokens are issued for this folder");
+        wq_log(@"App group %@: tokens are issued for %@, but it can't be reached (%@)", group, tokenRoot, wq_errno(errno));
     } else {
-        wq_log(@"App group: an access token didn't say which folder it is for");
+        wq_log(@"App group %@: an access token didn't say which folder it is for", group);
     }
-    NSString *root = WQGroupRootForPath(path);
-    if (root && ![root isEqualToString:path]) {
-        struct stat st;
-        if (lstat(root.fileSystemRepresentation, &st) == 0 && S_ISDIR(st.st_mode))
-            wq_log(@"App group: LiveContainer stand-in %@; using the real group folder %@", path, root);
-        else {
-            wq_log(@"App group: LiveContainer stand-in %@, but the real group folder %@ can't be reached (%@)", path, root, wq_errno(errno));
-            root = path;
+    // 2. Without a usable token answer: the container manager's path.
+    if (!root) {
+        NSString *managed = WQCanonicalVarPath(wq_cm_group_path(group) ?: @"");
+        if (wq_is_dir(managed)) {
+            root = managed;
+            wq_log(@"App group %@: using the container manager's folder %@", group, managed);
+        }
+    }
+    // 3. Last resort: NSFileManager's answer, mapped out of a LiveContainer
+    //    stand-in when it has that shape.
+    if (!root) {
+        root = WQGroupRootForPath(path);
+        if (root && ![root isEqualToString:path]) {
+            if (wq_is_dir(root)) wq_log(@"App group %@: LiveContainer stand-in %@; using the group folder %@", group, path, root);
+            else root = path;
         }
     }
     if (!root) return nil;
@@ -235,8 +225,22 @@ NSString *wq_app_group(void)
             if (value) groups = (__bridge_transfer NSArray *)value;
             CFRelease(task);
         }
+        // Prefer a group whose NSFileManager folder is the one tokens are
+        // issued for: under LiveContainer that is the group LiveContainer
+        // itself uses (it prefers SideStore's, while the entitlement list may
+        // start with AltStore's), elsewhere simply the first group (#65).
+        NSMutableArray *ordered = [NSMutableArray new];
         for (id candidate in groups) {
             if (![candidate isKindOfClass:NSString.class]) continue;
+            NSString *fm = [NSFileManager.defaultManager containerURLForSecurityApplicationGroupIdentifier:candidate].path;
+            NSString *token = wq_token_group_root(candidate);
+            BOOL agrees = fm.length && token && [token isEqualToString:WQCanonicalVarPath(fm)];
+            if (agrees) [ordered insertObject:candidate atIndex:0]; else [ordered addObject:candidate];
+            if (agrees) break;
+        }
+        for (id candidate in groups)
+            if ([candidate isKindOfClass:NSString.class] && ![ordered containsObject:candidate]) [ordered addObject:candidate];
+        for (NSString *candidate in ordered) {
             NSString *root = wq_group_root(candidate);
             if (root) {
                 group = candidate;
@@ -324,7 +328,7 @@ static int64_t wq_query_token_ex(NSString *group, BOOL altFlags, BOOL consumeIt,
         // after the signature are the extension class, flags, inode and the
         // path it was issued for; the signature (first field) is left out.
         static int described;
-        if (token && described < 3) {
+        if (token && consumeIt && described < 3) {
             described++;
             NSString *text = @(token) ?: @"";
             NSRange cut = [text rangeOfString:@";"];
