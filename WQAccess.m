@@ -111,6 +111,36 @@ typedef struct __SecTask *SecTaskRef;
 extern SecTaskRef SecTaskCreateFromSelf(CFAllocatorRef allocator);
 extern CFTypeRef SecTaskCopyValueForEntitlement(SecTaskRef task, CFStringRef entitlement, CFErrorRef *error);
 
+// The group container's path as the container manager knows it: the one
+// worse_query's token is issued for. nil when it can't be asked.
+static NSString *wq_cm_group_path(NSString *group)
+{
+    void *mgr = dlopen("/usr/lib/system/libsystem_containermanager.dylib", RTLD_NOW | RTLD_LOCAL);
+    if (!mgr) return nil;
+    void *(*create)(void) = (void *(*)(void))dlsym(mgr, "container_query_create");
+    void (*setClass)(void *, uint64_t) = (void (*)(void *, uint64_t))dlsym(mgr, "container_query_set_class");
+    void (*setGroups)(void *, xpc_object_t) = (void (*)(void *, xpc_object_t))dlsym(mgr, "container_query_set_group_identifiers");
+    void (*iterate)(void *, bool (^)(void *)) = (void (*)(void *, bool (^)(void *)))dlsym(mgr, "container_query_iterate_results_sync");
+    void (*freeQuery)(void *) = (void (*)(void *))dlsym(mgr, "container_query_free");
+    const char *(*getPath)(void *) = (const char *(*)(void *))dlsym(mgr, "container_object_get_path");
+    __block NSString *found = nil;
+    if (create && setClass && setGroups && iterate && freeQuery && getPath) {
+        void *query = create();
+        if (query) {
+            setClass(query, 7);   // app group container
+            setGroups(query, xpc_string_create(group.UTF8String));
+            iterate(query, ^bool(void *object) {
+                const char *path = object ? getPath(object) : NULL;
+                if (path && path[0]) { found = @(path); return false; }
+                return true;
+            });
+            freeQuery(query);
+        }
+    }
+    dlclose(mgr);
+    return found.length ? found : nil;
+}
+
 static NSString *wq_group_root(NSString *group)
 {
     if (!group) return nil;
@@ -119,6 +149,26 @@ static NSString *wq_group_root(NSString *group)
         if (roots[group]) return roots[group];
     }
     NSString *path = [NSFileManager.defaultManager containerURLForSecurityApplicationGroupIdentifier:group].path;
+    // Ask the container manager first: under LiveContainer the stand-in sits
+    // in LiveContainer's own group container, which needn't be the container
+    // of this group (#65, 0.9.16 Log).
+    NSString *managed = WQCanonicalVarPath(wq_cm_group_path(group) ?: @"");
+    if (managed.length && path.length && ![managed isEqualToString:WQCanonicalVarPath(path)]) {
+        struct stat st;
+        if (lstat(managed.fileSystemRepresentation, &st) == 0 && S_ISDIR(st.st_mode)) {
+            wq_log(@"App group: %@ is at %@ for the container manager; NSFileManager says %@. Using the container manager's.", group, managed, path);
+            @synchronized (NSFileManager.class) {
+                if (!roots) roots = [NSMutableDictionary new];
+                roots[group] = managed;
+            }
+            return managed;
+        }
+        wq_log(@"App group: the container manager's %@ for %@ can't be reached (%@)", managed, group, wq_errno(errno));
+    } else if (managed.length) {
+        wq_log(@"App group: container manager agrees on %@", managed);
+    } else {
+        wq_log(@"App group: the container manager gave no path for %@", group);
+    }
     NSString *root = WQGroupRootForPath(path);
     if (root && ![root isEqualToString:path]) {
         struct stat st;
@@ -191,6 +241,7 @@ static int64_t wq_query_token(NSString *group, BOOL altFlags)
     static cq_free_fn freeQuery;
     static cq_token_fn copyToken;
     static ext_consume_fn consume;
+    static co_get_path_fn resultPath;
     if (!mgr) {
         mgr = dlopen("/usr/lib/system/libsystem_containermanager.dylib", RTLD_NOW | RTLD_LOCAL);
         if (!mgr) return -2;
@@ -203,6 +254,7 @@ static int64_t wq_query_token(NSString *group, BOOL altFlags)
         freeQuery = (cq_free_fn)dlsym(mgr, "container_query_free");
         copyToken = (cq_token_fn)dlsym(mgr, "container_copy_sandbox_token");
         consume = (ext_consume_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_consume");
+        resultPath = (co_get_path_fn)dlsym(mgr, "container_object_get_path");
     }
     if (!create || !setClass || !setGroups || !setFlags || !setPart || !single || !freeQuery || !copyToken || !consume) return -2;
 
@@ -216,6 +268,13 @@ static int64_t wq_query_token(NSString *group, BOOL altFlags)
         setPart(query, 3);   // Library/Caches
         setFlags(query, altFlags ? 0x0000000800000000ULL : 0x0000008000000000ULL);
         void *result = single(query);
+        // Once, for the Log: the container the token is issued for. It must
+        // be the folder whose Library/Caches was swapped (LiveContainer, #65).
+        static dispatch_once_t logged;
+        if (result && resultPath) dispatch_once(&logged, ^{
+            const char *p = resultPath(result);
+            wq_log(@"grant: token query answers for %s", p && p[0] ? p : "(no path)");
+        });
         token = result ? copyToken(result) : NULL;
         int64_t handle = token ? consume(token) : (result ? -6 : -5);
         return token && handle < 0 ? -7 : handle;
