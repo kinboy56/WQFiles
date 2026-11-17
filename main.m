@@ -870,10 +870,21 @@ static NSString *wq_sort_direction_text(WQSortKey key, BOOL ascending)
     }
 }
 
-static NSArray<WQItem *> *wq_sorted_items(NSArray<WQItem *> *items)
+// An app's backup folder (Documents/AppBackups/<bundle id>): its backups are
+// named by date, and listed newest first like the restore picker.
+static BOOL wq_is_app_backup_folder(NSString *path)
+{
+    NSString *root = WQCanonicalVarPath(wq_app_backup_root().stringByStandardizingPath);
+    return root.length && [WQCanonicalVarPath(path.stringByStandardizingPath.stringByDeletingLastPathComponent) isEqualToString:root];
+}
+
+static NSArray<WQItem *> *wq_sorted_items(NSArray<WQItem *> *items, BOOL newestFirst)
 {
     WQSortKey key = wq_sort_key();
     BOOL ascending = wq_sort_ascending(), foldersFirst = wq_folders_first();
+    // By name, date-named backups go newest first (the restore picker's
+    // order); the other sort keys stay as chosen.
+    if (newestFirst && key == WQSortName) ascending = NO;
     return [items sortedArrayUsingComparator:^NSComparisonResult(WQItem *a, WQItem *b) {
         if (foldersFirst && a.isDir != b.isDir) return a.isDir ? NSOrderedAscending : NSOrderedDescending;
         NSComparisonResult r = NSOrderedSame;
@@ -1836,7 +1847,7 @@ static NSString *wq_info_date(struct timespec ts)
             return NO;
         }]];
     }
-    _items = wq_sorted_items(shown);
+    _items = wq_sorted_items(shown, wq_is_app_backup_folder(_path));
     // Alphabet sidebar: only for longer lists sorted by name.
     NSMutableArray *titles = [NSMutableArray new];
     NSMutableDictionary *rows = [NSMutableDictionary new];
