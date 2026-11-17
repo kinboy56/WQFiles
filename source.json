@@ -22,9 +22,9 @@
       "versions": [
         {
           "version": "0.9.17",
-          "buildVersion": "104",
+          "buildVersion": "105",
           "date": "2026-11-17",
-          "size": 2089022,
+          "size": 2089006,
           "downloadURL": "https://github.com/kolbicz/WQFiles/releases/download/v0.9.17/WQFiles.ipa",
           "localizedDescription": "Fixes LiveContainer setups where every folder was refused, SQLite restore with -wal files, lossless SQLite and plist edits, and backups listed newest first.",
           "minOSVersion": "26.0"
