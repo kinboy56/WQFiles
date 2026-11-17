@@ -28,6 +28,7 @@
 #import "WQHexViewer.h"
 #import "WQSQLiteViewer.h"
 #import "WQHealth.h"
+#import "WQSQLiteSave.h"
 #import "WQTrash.h"
 #import "WQArchive.h"
 #import "WQWebServer.h"
@@ -3340,18 +3341,27 @@ static NSString *wq_info_date(struct timespec ts)
     [alert addAction:wq_alert_action(@"Restore", UIAlertActionStyleDestructive, ^(UIAlertAction *__unused a) {
         [self runIO:^BOOL(NSString **error) {
             struct stat st;
-            if (!wq_stat(original, &st)) return wq_create_file_from(original, backup, error);
-            NSString *unit = nil;
-            if (!wq_write_from_file_with_backup(original, backup, &unit, error)) return NO;
-            // Keep Data Before Restore off: drop the copy of what was replaced.
-            if (!wq_keep_before_restore() && unit) {
-                NSString *discardError = nil;
-                if (wq_delete_backup(unit, &discardError))
-                    wq_log(@"restore %@: removed the before-restore backup %@ (Keep Data Before Restore is off)",
-                           original.lastPathComponent, unit.lastPathComponent);
-                else
-                    wq_log(@"restore %@: couldn't remove the before-restore backup %@ (%@)",
-                           original.lastPathComponent, unit.lastPathComponent, discardError);
+            NSMutableArray<NSString *> *units = [NSMutableArray new];
+            if (!wq_stat(original, &st)) {
+                if (!wq_create_file_from(original, backup, error)) return NO;
+            } else {
+                NSString *unit = nil;
+                if (!wq_write_from_file_with_backup(original, backup, &unit, error)) return NO;
+                if (unit) [units addObject:unit];
+            }
+            // An SQLite database: its live -wal/-shm would reopen the newer data.
+            if (!wq_sqlite_restore_sidecars(original, backup, units, error)) return NO;
+            // Keep Data Before Restore off: drop the copies of what was replaced.
+            if (!wq_keep_before_restore()) {
+                for (NSString *unit in units) {
+                    NSString *discardError = nil;
+                    if (wq_delete_backup(unit, &discardError))
+                        wq_log(@"restore %@: removed the before-restore backup %@ (Keep Data Before Restore is off)",
+                               original.lastPathComponent, unit.lastPathComponent);
+                    else
+                        wq_log(@"restore %@: couldn't remove the before-restore backup %@ (%@)",
+                               original.lastPathComponent, unit.lastPathComponent, discardError);
+                }
             }
             return YES;
         } failure:WQLocalizedNullable(@"Restore failed")];
