@@ -1371,6 +1371,12 @@ static void WQAppScanWatch(WQScanCancellation *cancellation, NSUInteger lastSeri
 
 - (void)clear:(WQAppItem *)app
 {
+    // Checked again here: "Back Up, Then Clear" can run long, and Allow
+    // Deleting may have been turned off meanwhile (review DR-21).
+    if (!wq_deleting_allowed()) {
+        [self finish:WQLocalized(@"Not cleared") message:WQLocalized(@"Allow Deleting was turned off, so nothing was deleted.")];
+        return;
+    }
     [self setBusy:YES status:WQLocalizedFormat(@"Clearing %@…", app.name)];
     dispatch_async(wq_io(), ^{
         unsigned long long freed = 0;

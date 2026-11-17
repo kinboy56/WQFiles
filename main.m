@@ -3297,6 +3297,10 @@ static NSString *wq_info_date(struct timespec ts)
                 if (!ok && !stopped)
                     wq_alert(self, @"Not everything was deleted",
                              WQLocalizedFormat(@"%lu files were deleted (copies are in Backups), then:\n%@", (unsigned long)done, error ?: @"unknown error"));
+                // Stopped part-way: say what is already gone (review DR-55).
+                else if (stopped && done)
+                    wq_alert(self, @"Stopped",
+                             WQLocalizedFormat(@"Stopped after %lu files were deleted. Copies of deleted files are in Backups; the rest is still there.", (unsigned long)done));
                 [self reload];
             };
             if (self.presentedViewController == hud) [self dismissViewControllerAnimated:YES completion:finish];
@@ -5609,7 +5613,7 @@ static void wq_apply_design(void);
 
 - (void)updateHealthUI
 {
-    UIColor *tint = UIColor.systemGreenColor;
+    UIColor *tint;
     if (_checkingAccess) {
         tint = UIColor.systemOrangeColor;
         _statusLabel.text = WQLocalizedNullable(@"Checking access…");

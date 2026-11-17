@@ -333,7 +333,7 @@ static void wq_log_recovery_failure(NSString *libraryPath, int error, NSString *
     static NSUInteger repeats;
     NSString *line = [NSString stringWithFormat:@"%@ (%@; %@)", libraryPath, wq_errno(error), state];
     @synchronized (NSFileManager.class) {
-        if ([line isEqualToString:last]) {
+        if (last && [line isEqualToString:last]) {
             repeats++;
             if (repeats % 25 == 0) wq_log(@"token cache recovery still failing (%lu more times)", (unsigned long)repeats);
             return;
@@ -357,9 +357,14 @@ static int64_t wq_query(NSString *target, BOOL altFlags)
     if (library < 0) return -4;
     int lock = WQOpenRegularAt(library, ".wq-caches-lock", O_RDWR | O_CREAT, 0600);
     if (lock < 0 || flock(lock, LOCK_EX | LOCK_NB) != 0) {
+        // A lock that isn't a regular file (a link or folder another app left)
+        // never opens: report it like a blocked cache so wq_grant's automatic
+        // repair moves it aside (review DR-08). A busy lock is just busy.
+        BOOL malformed = lock < 0 && (errno == EINVAL || errno == ELOOP || errno == EISDIR);
+        if (malformed) wq_log(@"grant: the access cache lock in the App Group isn't a regular file (%@)", wq_errno(errno));
         if (lock >= 0) close(lock);
         close(library);
-        return -4;
+        return malformed ? -5 : -4;
     }
     int64_t handle = -4;
     @try {
@@ -1365,6 +1370,10 @@ BOOL wq_backup_unit_deletable(NSString *path)
 {
     NSString *canonical = WQCanonicalVarPath(path);
     if (!WQAbsolutePathGrammar(canonical) || [canonical.lastPathComponent hasPrefix:@"."]) return NO;
+    // A unit is always a folder; a file or link with a unit-like name isn't
+    // one (review DR-07).
+    struct stat unitStat;
+    if (lstat(canonical.fileSystemRepresentation, &unitStat) != 0 || !S_ISDIR(unitStat.st_mode)) return NO;
     NSString *parentPath = canonical.stringByDeletingLastPathComponent;
     NSString *grandparentPath = parentPath.stringByDeletingLastPathComponent;
     NSString *fileRoot = WQCanonicalVarPath(wq_backup_root());
